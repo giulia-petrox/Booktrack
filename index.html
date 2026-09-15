@@ -401,7 +401,6 @@ header.masthead{
 .detail-info .detail-author{ font-size:14px; color:var(--ink-soft); margin-bottom:10px; }
 .detail-meta{ font-size:12.5px; color:var(--ink-soft); line-height:1.9; }
 .detail-meta b{ color:var(--ink); font-weight:600; }
-.detail-divider{ height:1px; background:var(--line-soft); margin:18px 0; }
 .badge{ display:inline-flex; align-items:center; padding:4px 12px; border-radius:var(--radius-pill); font-size:11.5px; font-weight:700; letter-spacing:.01em; }
 .badge-toread{ background:var(--amber-status-bg); color:var(--amber-status); }
 .badge-reading{ background:var(--burgundy-status-bg); color:var(--burgundy-status); }
@@ -543,9 +542,7 @@ header.masthead{
           </div>
           <div class="field">
             <label>Genere</label>
-            <select id="f-genre">
-              <!-- Popolato via JS -->
-            </select>
+            <select id="f-genre"></select>
           </div>
         </div>
         <div class="field">
@@ -612,10 +609,6 @@ header.masthead{
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 <script>
-/* ============================================================
-   BookTrack — state, storage, rendering, interactions
-   ============================================================ */
-
 const STORAGE_KEY = 'books';
 let books = [];
 let currentStatusFilter = 'all';
@@ -630,23 +623,10 @@ let html5QrCode = null;
 let scannerRunning = false;
 
 const BOOK_GENRES = [
-  "Romanzo",
-  "Narrativa contemporanea",
-  "Romanzo storico",
-  "Giallo / Thriller / Noir",
-  "Fantasy",
-  "Fantascienza",
-  "Horror",
-  "Romanzo rosa / Sentimentale",
-  "Avventura",
-  "Biografie / Autobiografie",
-  "Saggistica / Divulgazione",
-  "Storia",
-  "Filosofia / Psicologia",
-  "Poesia",
-  "Fumetti / Graphic Novel",
-  "Classici",
-  "Altro"
+  "Romanzo", "Narrativa contemporanea", "Romanzo storico", "Giallo / Thriller / Noir",
+  "Fantasy", "Fantascienza", "Horror", "Romanzo rosa / Sentimentale", "Avventura",
+  "Biografie / Autobiografie", "Saggistica / Divulgazione", "Storia",
+  "Filosofia / Psicologia", "Poesia", "Fumetti / Graphic Novel", "Classici", "Altro"
 ];
 
 function genreOptionsHtml(selected = '') {
@@ -676,7 +656,6 @@ function showToast(msg){
   showToast._t = setTimeout(()=> t.classList.remove('show'), 2600);
 }
 
-/* ---------------- Storage ---------------- */
 async function loadBooks(){
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -691,11 +670,10 @@ async function saveBooks(){
   try{
     localStorage.setItem(STORAGE_KEY, JSON.stringify(books));
   }catch(e){
-    showToast('Errore di salvataggio: spazio esaurito o browser in modalità privata.');
+    showToast('Errore di salvataggio.');
   }
 }
 
-/* ---------------- Star rating render ---------------- */
 function starsMarkup(value){
   let html = '';
   for(let i=1;i<=5;i++){
@@ -704,7 +682,6 @@ function starsMarkup(value){
   return html;
 }
 
-/* ---------------- Rendering ---------------- */
 function statusLabel(s){
   return {toread:'Da leggere', reading:'In corso', read:'Letto'}[s] || s;
 }
@@ -769,15 +746,8 @@ function render(){
   if(books.length === 0){
     area.innerHTML = `
       <div class="empty-state">
-        <svg class="empty-illustration" width="88" height="72" viewBox="0 0 88 72" fill="none">
-          <rect x="10" y="42" width="40" height="10" rx="3" fill="#EFDDAE" transform="rotate(-3 10 42)"/>
-          <rect x="14" y="30" width="36" height="10" rx="3" fill="#E1E9D6" transform="rotate(2 14 30)"/>
-          <rect x="18" y="18" width="30" height="10" rx="3" fill="#F7DEDD" transform="rotate(-2 18 18)"/>
-          <path d="M60 46c4-10 14-14 22-8-2 9-12 15-22 8z" fill="#E1E9D6"/>
-          <circle cx="70" cy="16" r="4" fill="#C99A3E" opacity="0.6"/>
-        </svg>
         <h3>Lo scaffale è ancora vuoto</h3>
-        <p>Aggiungi il tuo primo libro cercandolo online, scansionando il codice a barre o inserendolo a mano.</p>
+        <p>Aggiungi il tuo primo libro.</p>
         <button class="btn btn-primary" id="empty-add-btn">Aggiungi un libro</button>
       </div>`;
     $('#empty-add-btn').addEventListener('click', ()=> openAddModal());
@@ -785,11 +755,7 @@ function render(){
   }
 
   if(list.length === 0){
-    area.innerHTML = `
-      <div class="empty-state">
-        <h3>Nessun libro trovato</h3>
-        <p>Prova a cambiare il filtro o il termine di ricerca.</p>
-      </div>`;
+    area.innerHTML = `<div class="empty-state"><h3>Nessun libro trovato</h3></div>`;
     return;
   }
 
@@ -807,7 +773,7 @@ function render(){
     const groupNames = Object.keys(groups).sort((a,b)=> a.localeCompare(b, 'it'));
     area.innerHTML = groupNames.map(name => `
       <div class="group-block">
-        <h3 class="group-title">${escapeHtml(name)} <span>${groups[name].length} ${groups[name].length===1?'libro':'libri'}</span></h3>
+        <h3 class="group-title">${escapeHtml(name)} <span>${groups[name].length} libri</span></h3>
         <div class="grid">${groups[name].map(bookCardHtml).join('')}</div>
       </div>
     `).join('');
@@ -818,7 +784,6 @@ function render(){
   });
 }
 
-/* ---------------- Toolbar events ---------------- */
 $('#search-input').addEventListener('input', e=>{
   searchQuery = e.target.value;
   render();
@@ -837,16 +802,13 @@ $('#group-select').addEventListener('change', e=>{
 });
 $('#btn-clear-all').addEventListener('click', async ()=>{
   if(books.length===0) return;
-  if(!confirm("Vuoi svuotare tutta la libreria? L'azione non è reversibile.")) return;
+  if(!confirm("Vuoi svuotare tutta la libreria?")) return;
   books = [];
   await saveBooks();
   render();
   showToast('Libreria svuotata.');
 });
 
-/* ============================================================
-   ADD BOOK MODAL
-   ============================================================ */
 function resetAddForm(){
   $('#f-title').value = '';
   $('#f-author').value = '';
@@ -862,8 +824,6 @@ function resetAddForm(){
   $('#f-rating').innerHTML = starsMarkup(0);
   renderCoverPreview();
   $$('.status-choice').forEach(c=> c.classList.toggle('active', c.dataset.status===addFormStatus));
-  $('#search-online-input').value = '';
-  $('#search-results').innerHTML = '<div class="state-msg">Cerca un titolo per iniziare — i risultati arrivano da Google Books e Open Library.</div>';
 }
 
 function renderCoverPreview(){
@@ -893,10 +853,9 @@ $('#add-overlay').addEventListener('click', e=>{ if(e.target.id==='add-overlay')
 
 function switchMode(mode){
   $$('.mode-tab').forEach(t=> t.classList.toggle('active', t.dataset.mode===mode));
-  $('#panel-manual').style.display = mode==='manual' ? '' : (mode==='scan'||mode==='search' ? 'none':'');
+  $('#panel-manual').style.display = mode==='manual' ? '' : 'none';
   $('#panel-search').style.display = mode==='search' ? '' : 'none';
   $('#panel-scan').style.display = mode==='scan' ? '' : 'none';
-  $('#panel-manual').style.display = mode==='manual' ? '' : 'none';
   if(mode !== 'scan') stopScanner();
   $('#add-save').style.display = mode==='manual' ? '' : 'none';
 }
@@ -932,7 +891,7 @@ $('#cover-file-input').addEventListener('change', e=>{
       canvas.width = w; canvas.height = h;
       canvas.getContext('2d').drawImage(img, 0, 0, w, h);
       addFormCover = canvas.toDataURL('image/jpeg', 0.75);
-      addFormColor = ''; // Reset color if file uploaded
+      addFormColor = '';
       renderCoverPreview();
     };
     img.src = ev.target.result;
@@ -942,7 +901,7 @@ $('#cover-file-input').addEventListener('change', e=>{
 
 $('#f-cover-color').addEventListener('input', e=>{
   addFormColor = e.target.value;
-  addFormCover = ''; // Reset image if color selected
+  addFormCover = '';
   renderCoverPreview();
 });
 
@@ -975,24 +934,19 @@ $('#add-save').addEventListener('click', async ()=>{
   await saveBooks();
   render();
   closeAddModal();
-  showToast('Libro aggiunto alla libreria.');
+  showToast('Libro aggiunto.');
 });
 
-/* ---------------- Search online ---------------- */
 async function searchOnline(query){
   const resultsEl = $('#search-results');
   resultsEl.innerHTML = '<div class="state-msg"><div class="loading-spinner"></div></div>';
   const q = encodeURIComponent(query);
-
-  const fetchGoogle = fetch('https://www.googleapis.com/books/v1/volumes?maxResults=10&q=' + q).then(r=>r.json()).catch(()=>null);
-  const fetchOpenLib = fetch('https://openlibrary.org/search.json?limit=10&q=' + q).then(r=>r.json()).catch(()=>null);
-
   try{
-    const [googleData, openData] = await Promise.all([fetchGoogle, fetchOpenLib]);
+    const res = await fetch('https://www.googleapis.com/books/v1/volumes?maxResults=10&q=' + q);
+    const data = await res.json();
     let combined = [];
-
-    if(googleData && googleData.items){
-      googleData.items.forEach(it => {
+    if(data && data.items){
+      data.items.forEach(it => {
         const info = it.volumeInfo || {};
         const thumb = info.imageLinks ? (info.imageLinks.thumbnail || info.imageLinks.smallThumbnail) : '';
         combined.push({
@@ -1000,191 +954,79 @@ async function searchOnline(query){
           author: (info.authors||[]).join(', ') || 'Autore sconosciuto',
           year: info.publishedDate ? info.publishedDate.slice(0,4) : '',
           genre: (info.categories||[])[0] || '',
-          isbn: ((info.industryIdentifiers||[]).find(i=> i.type==='ISBN_13') || (info.industryIdentifiers||[])[0] || {}).identifier || '',
-          coverSm: thumb ? thumb.replace('http://','https://') : '',
+          isbn: ((info.industryIdentifiers||[]).find(i=> i.type==='ISBN_13') || {}).identifier || '',
           coverLg: thumb ? thumb.replace('http://','https://').replace('&edge=curl', '') : ''
         });
       });
     }
-
-    if(openData && openData.docs){
-      openData.docs.forEach(it => {
-        combined.push({
-          title: it.title || '',
-          author: (it.author_name || []).join(', ') || 'Autore sconosciuto',
-          year: it.first_publish_year || '',
-          genre: (it.subject || [])[0] || '',
-          isbn: (it.isbn || [])[0] || '',
-          coverSm: it.cover_i ? `https://covers.openlibrary.org/b/id/${it.cover_i}-M.jpg` : '',
-          coverLg: it.cover_i ? `https://covers.openlibrary.org/b/id/${it.cover_i}-L.jpg` : ''
-        });
-      });
-    }
-
     if(combined.length === 0){
-      resultsEl.innerHTML = '<div class="state-msg">Nessun risultato da entrambi i database. Prova un altro termine o inserisci il libro a mano.</div>';
+      resultsEl.innerHTML = '<div class="state-msg">Nessun risultato trovato.</div>';
       return;
     }
-
-    combined = combined.filter((v,i,a)=>a.findIndex(t=>(t.title===v.title && t.author===v.author))===i);
-
-    resultsEl.innerHTML = combined.map((it, idx)=>{
-      return `
+    resultsEl.innerHTML = combined.map((it, idx)=>`
       <div class="result-item" data-idx="${idx}">
-        <div class="result-cover">${it.coverSm ? `<img src="${escapeHtml(it.coverSm)}">` : ''}</div>
+        <div class="result-cover">${it.coverLg ? `<img src="${escapeHtml(it.coverLg)}">` : ''}</div>
         <div class="result-info">
-          <div class="result-title">${escapeHtml(it.title || 'Senza titolo')}</div>
-          <div class="result-meta">${escapeHtml(it.author)}${it.year ? ' · ' + escapeHtml(it.year) : ''}</div>
+          <div class="result-title">${escapeHtml(it.title)}</div>
+          <div class="result-meta">${escapeHtml(it.author)}</div>
         </div>
-        <button class="btn btn-sm" tabindex="-1">Usa questo</button>
-      </div>`;
-    }).join('');
+        <button class="btn btn-sm">Usa questo</button>
+      </div>`).join('');
 
     $$('.result-item', resultsEl).forEach(el=>{
-      el.addEventListener('click', (e)=>{
-        const idx = e.currentTarget.dataset.idx;
-        if(idx===undefined) return;
-        applyCombinedResult(combined[parseInt(idx,10)]);
+      el.addEventListener('click', e=>{
+        const it = combined[parseInt(e.currentTarget.dataset.idx, 10)];
+        $('#f-title').value = it.title;
+        $('#f-author').value = it.author;
+        $('#f-date').value = it.year;
+        $('#f-genre').innerHTML = genreOptionsHtml(it.genre);
+        $('#f-barcode').value = it.isbn;
+        addFormCover = it.coverLg;
+        addFormColor = '';
+        renderCoverPreview();
+        switchMode('manual');
       });
     });
-
   }catch(err){
-    resultsEl.innerHTML = '<div class="state-msg">Si è verificato un errore di rete generale. Inserisci il libro a mano.</div>';
+    resultsEl.innerHTML = '<div class="state-msg">Errore di rete.</div>';
   }
-}
-
-function applyCombinedResult(it){
-  $('#f-title').value = it.title || '';
-  $('#f-author').value = it.author || 'Autore sconosciuto';
-  $('#f-date').value = it.year || '';
-  
-  const genreSelect = $('#f-genre');
-  let matchedGenre = '';
-  if (it.genre) {
-    const found = BOOK_GENRES.find(g => g.toLowerCase().includes(it.genre.toLowerCase()) || it.genre.toLowerCase().includes(g.toLowerCase()));
-    matchedGenre = found || it.genre;
-  }
-  genreSelect.innerHTML = genreOptionsHtml(matchedGenre);
-
-  $('#f-barcode').value = it.isbn || '';
-  addFormCover = it.coverLg || it.coverSm || '';
-  addFormColor = '';
-  renderCoverPreview();
-  switchMode('manual');
-  showToast('Dati importati — controlla e conferma.');
 }
 
 $('#btn-search-online').addEventListener('click', ()=>{
   const q = $('#search-online-input').value.trim();
-  if(!q){ showToast('Scrivi un titolo o un autore da cercare.'); return; }
-  searchOnline(q);
-});
-$('#search-online-input').addEventListener('keydown', e=>{
-  if(e.key === 'Enter'){ e.preventDefault(); $('#btn-search-online').click(); }
+  if(q) searchOnline(q);
 });
 
-/* ---------------- Barcode scan ---------------- */
 async function startScanner(){
   const statusEl = $('#scan-status');
-  if(typeof Html5Qrcode === 'undefined'){
-    statusEl.textContent = "Lo scanner non è disponibile in questo momento. Usa la ricerca online o l'inserimento manuale.";
-    return;
-  }
+  if(typeof Html5Qrcode === 'undefined') return;
   try{
-    html5QrCode = new Html5Qrcode("scanner-view", {
-      formatsToSupport: [
-        Html5QrcodeSupportedFormats.EAN_13,
-        Html5QrcodeSupportedFormats.EAN_8,
-        Html5QrcodeSupportedFormats.UPC_A,
-        Html5QrcodeSupportedFormats.UPC_E
-      ]
-    });
-    await html5QrCode.start(
-      { facingMode: "environment" },
-      { fps: 10, qrbox: { width: 250, height: 130 } },
-      onScanSuccess,
-      ()=>{}
-    );
+    html5QrCode = new Html5Qrcode("scanner-view");
+    await html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, async (txt)=>{
+      stopScanner();
+      $('#f-barcode').value = txt;
+      switchMode('manual');
+      searchOnline(txt);
+    }, ()=>{});
     scannerRunning = true;
-    statusEl.textContent = 'Inquadra il codice a barre sul retro del libro.';
     $('#btn-scan-start').style.display = 'none';
-  }catch(err){
-    statusEl.textContent = 'Non riesco ad accedere alla fotocamera. Controlla i permessi del browser oppure inserisci il codice a mano.';
-  }
+  }catch(e){ statusEl.textContent = "Errore fotocamera."; }
 }
 
 function stopScanner(){
   if(html5QrCode && scannerRunning){
-    html5QrCode.stop().then(()=>{ html5QrCode.clear(); }).catch(()=>{});
+    html5QrCode.stop().then(()=>html5QrCode.clear()).catch(()=>{});
     scannerRunning = false;
     $('#btn-scan-start').style.display = '';
   }
 }
-
-async function onScanSuccess(decodedText){
-  if(!scannerRunning) return;
-  stopScanner();
-  $('#scan-status').textContent = 'Codice rilevato: ' + decodedText + ' — sto cercando i dettagli…';
-  $('#f-barcode').value = decodedText;
-  
-  try{
-    const q = encodeURIComponent(decodedText);
-    const fetchGoogle = fetch('https://www.googleapis.com/books/v1/volumes?q=isbn:' + q).then(r=>r.json()).catch(()=>null);
-    const fetchOpenLib = fetch('https://openlibrary.org/search.json?isbn=' + q).then(r=>r.json()).catch(()=>null);
-    
-    const [googleData, openData] = await Promise.all([fetchGoogle, fetchOpenLib]);
-    let found = null;
-    
-    if(googleData && googleData.items && googleData.items.length > 0){
-        const info = googleData.items[0].volumeInfo || {};
-        const thumb = info.imageLinks ? (info.imageLinks.thumbnail || info.imageLinks.smallThumbnail) : '';
-        found = {
-          title: info.title || '',
-          author: (info.authors||[]).join(', ') || 'Autore sconosciuto',
-          year: info.publishedDate ? info.publishedDate.slice(0,4) : '',
-          genre: (info.categories||[])[0] || '',
-          isbn: decodedText,
-          coverSm: thumb ? thumb.replace('http://','https://') : '',
-          coverLg: thumb ? thumb.replace('http://','https://').replace('&edge=curl', '') : ''
-        };
-    } else if (openData && openData.docs && openData.docs.length > 0) {
-        const it = openData.docs[0];
-        found = {
-          title: it.title || '',
-          author: (it.author_name || []).join(', ') || 'Autore sconosciuto',
-          year: it.first_publish_year || '',
-          genre: (it.subject || [])[0] || '',
-          isbn: decodedText,
-          coverSm: it.cover_i ? `https://covers.openlibrary.org/b/id/${it.cover_i}-M.jpg` : '',
-          coverLg: it.cover_i ? `https://covers.openlibrary.org/b/id/${it.cover_i}-L.jpg` : ''
-        };
-    }
-
-    if(found){
-      applyCombinedResult(found);
-    } else {
-      switchMode('manual');
-      showToast('Codice rilevato, ma nessuna corrispondenza online. Completa i dati a mano.');
-    }
-  }catch(err){
-    switchMode('manual');
-    showToast('Codice rilevato: completa i dati a mano.');
-  }
-}
-
 $('#btn-scan-start').addEventListener('click', startScanner);
 
-/* ============================================================
-   DETAIL / EDIT MODAL
-   ============================================================ */
-let editModalCover = '';
-let editModalColor = '';
-
+/* DETAIL / EDIT MODAL */
 function openDetail(id){
   selectedBookId = id;
   const b = books.find(x=> x.id===id);
   if(!b) return;
-  
   renderDetailView(b, false);
 }
 
@@ -1216,9 +1058,7 @@ function renderDetailView(b, isEditing = false){
             ${b.publishDate ? `<div><b>Pubblicazione:</b> ${escapeHtml(b.publishDate)}</div>` : ''}
             ${b.barcode ? `<div><b>Codice a barre:</b> ${escapeHtml(b.barcode)}</div>` : ''}
           </div>
-          <div class="rating-block" style="margin-top:10px;">
-            <div class="star-row lg">${starsMarkup(b.rating||0)}</div>
-          </div>
+          <div style="margin-top:10px;"><div class="star-row lg">${starsMarkup(b.rating||0)}</div></div>
         </div>
       </div>
     `;
@@ -1234,7 +1074,7 @@ function renderDetailView(b, isEditing = false){
     `;
 
     $('#detail-btn-delete').onclick = async () => {
-      if(!confirm(`Eliminare "${b.title}" dalla libreria?`)) return;
+      if(!confirm(`Eliminare "${b.title}"?`)) return;
       books = books.filter(x=> x.id !== b.id);
       await saveBooks();
       render();
@@ -1242,16 +1082,13 @@ function renderDetailView(b, isEditing = false){
       showToast('Libro eliminato.');
     };
 
-    $('#detail-btn-edit').onclick = () => {
-      renderDetailView(b, true);
-    };
-
+    $('#detail-btn-edit').onclick = () => renderDetailView(b, true);
     $('#detail-btn-done').onclick = closeDetail;
 
   } else {
     titleEl.textContent = "Modifica libro";
-    editModalCover = b.cover || '';
-    editModalColor = b.coverColor || '';
+    let editModalCover = b.cover || '';
+    let editModalColor = b.coverColor || '';
 
     body.innerHTML = `
       <div class="field">
@@ -1274,31 +1111,14 @@ function renderDetailView(b, isEditing = false){
         </div>
       </div>
       <div class="field-row">
-        <div class="field">
-          <label>Titolo *</label>
-          <input type="text" id="edit-title" value="${escapeHtml(b.title)}">
-        </div>
-        <div class="field">
-          <label>Autore</label>
-          <input type="text" id="edit-author" value="${escapeHtml(b.author)}">
-        </div>
+        <div class="field"><label>Titolo *</label><input type="text" id="edit-title" value="${escapeHtml(b.title)}"></div>
+        <div class="field"><label>Autore</label><input type="text" id="edit-author" value="${escapeHtml(b.author)}"></div>
       </div>
       <div class="field-row">
-        <div class="field">
-          <label>Data di pubblicazione</label>
-          <input type="text" id="edit-date" value="${escapeHtml(b.publishDate || '')}">
-        </div>
-        <div class="field">
-          <label>Genere</label>
-          <select id="edit-genre">
-            ${genreOptionsHtml(b.genre || '')}
-          </select>
-        </div>
+        <div class="field"><label>Pubblicazione</label><input type="text" id="edit-date" value="${escapeHtml(b.publishDate || '')}"></div>
+        <div class="field"><label>Genere</label><select id="edit-genre">${genreOptionsHtml(b.genre || '')}</select></div>
       </div>
-      <div class="field">
-        <label>Codice a barre (ISBN)</label>
-        <input type="text" id="edit-barcode" value="${escapeHtml(b.barcode || '')}">
-      </div>
+      <div class="field"><label>Codice a barre (ISBN)</label><input type="text" id="edit-barcode" value="${escapeHtml(b.barcode || '')}"></div>
       <div class="field">
         <label>Stato di lettura</label>
         <div class="status-picker" id="edit-status-picker">
@@ -1308,7 +1128,7 @@ function renderDetailView(b, isEditing = false){
         </div>
       </div>
       <div class="field">
-        <label>La tua valutazione</label>
+        <label>Valutazione</label>
         <div class="star-row lg" id="edit-rating" data-value="${b.rating||0}">${starsMarkup(b.rating||0)}</div>
       </div>
     `;
@@ -1337,13 +1157,9 @@ function renderDetailView(b, isEditing = false){
       reader.onload = ev=>{
         const img = new Image();
         img.onload = ()=>{
-          const maxW = 320;
-          const scale = Math.min(1, maxW / img.width);
-          const w = Math.round(img.width * scale);
-          const h = Math.round(img.height * scale);
           const canvas = document.createElement('canvas');
-          canvas.width = w; canvas.height = h;
-          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          canvas.width = 200; canvas.height = 300;
+          canvas.getContext('2d').drawImage(img, 0, 0, 200, 300);
           editModalCover = canvas.toDataURL('image/jpeg', 0.75);
           editModalColor = '';
           $('#edit-cover-preview').innerHTML = `<img src="${escapeHtml(editModalCover)}">`;
@@ -1379,7 +1195,7 @@ function renderDetailView(b, isEditing = false){
       const title = $('#edit-title').value.trim();
       const author = $('#edit-author').value.trim() || 'Autore sconosciuto';
       if(!title){
-        showToast('Elenco o titolo obbligatorio.');
+        showToast('Il titolo è obbligatorio.');
         return;
       }
       b.title = title;
@@ -1395,7 +1211,7 @@ function renderDetailView(b, isEditing = false){
       await saveBooks();
       render();
       closeDetail();
-      showToast('Modifiche salvate con successo.');
+      showToast('Modifiche salvate.');
     };
   }
 
@@ -1410,7 +1226,6 @@ function closeDetail(){
 $('#detail-modal-close').addEventListener('click', closeDetail);
 $('#detail-overlay').addEventListener('click', e=>{ if(e.target.id==='detail-overlay') closeDetail(); });
 
-/* ---------------- Init ---------------- */
 loadBooks();
 </script>
 </body>
