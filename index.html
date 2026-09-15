@@ -686,6 +686,10 @@ function statusLabel(s){
   return {toread:'Da leggere', reading:'In corso', read:'Letto'}[s] || s;
 }
 
+function statusBadgeClass(s){
+  return {toread:'badge-toread', reading:'badge-reading', read:'badge-read'}[s] || '';
+}
+
 function getFilteredBooks(){
   let list = books.slice();
   if(currentStatusFilter !== 'all'){
@@ -1001,7 +1005,6 @@ $('#btn-search-online').addEventListener('click', ()=>{
   if(q) searchOnline(q);
 });
 
-// Funzione automatica per cercare tramite ISBN scansionato
 async function fetchBookByIsbn(isbn){
   try{
     const res = await fetch('https://www.googleapis.com/books/v1/volumes?q=isbn:' + isbn);
@@ -1024,7 +1027,7 @@ async function fetchBookByIsbn(isbn){
     } else {
       $('#f-barcode').value = isbn;
       switchMode('manual');
-      showToast('Codice scansionato, ma nessun libro trovato online. Inserisci i dati manualmente.');
+      showToast('Codice scansionato, ma nessun libro trovato online.');
     }
   }catch(err){
     $('#f-barcode').value = isbn;
