@@ -945,30 +945,51 @@ $('#add-save').addEventListener('click', async ()=>{
   showToast('Libro aggiunto.');
 });
 
-// Ricerca online testuale combinata sicura
+// Ricerca online testuale combinata (Google Books + Open Library di riserva)
 async function searchOnline(query){
   const resultsEl = $('#search-results');
   resultsEl.innerHTML = '<div class="state-msg"><div class="loading-spinner"></div></div>';
-  const q = encodeURIComponent(query);
+  const q = encodeURIComponent(query.trim());
 
   try{
+    let combined = [];
+
+    // 1. Google Books
     const res = await fetch('https://www.googleapis.com/books/v1/volumes?maxResults=10&q=' + q);
     const data = await res.json();
-    let combined = [];
 
     if(data && data.items){
       data.items.forEach(it => {
         const info = it.volumeInfo || {};
         const thumb = info.imageLinks ? (info.imageLinks.thumbnail || info.imageLinks.smallThumbnail) : '';
+        const isbnObj = (info.industryIdentifiers || []).find(i => i.type === 'ISBN_13' || i.type === 'ISBN_10');
         combined.push({
-          title: info.title || '',
-          author: (info.authors||[]).join(', ') || 'Autore sconosciuto',
+          title: info.title || 'Senza titolo',
+          author: (info.authors || []).join(', ') || 'Autore sconosciuto',
           year: info.publishedDate ? info.publishedDate.slice(0,4) : '',
-          genre: (info.categories||[])[0] || '',
-          isbn: ((info.industryIdentifiers||[]).find(i=> i.type==='ISBN_13') || {}).identifier || '',
+          genre: (info.categories || [])[0] || '',
+          isbn: isbnObj ? isbnObj.identifier : '',
           coverLg: thumb ? thumb.replace('http://','https://').replace('&edge=curl', '') : ''
         });
       });
+    }
+
+    // 2. Open Library fallback se Google Books non restituisce risultati
+    if(combined.length === 0){
+      const resOl = await fetch('https://openlibrary.org/search.json?limit=10&q=' + q);
+      const dataOl = await resOl.json();
+      if(dataOl && dataOl.docs){
+        dataOl.docs.forEach(it => {
+          combined.push({
+            title: it.title || 'Senza titolo',
+            author: (it.author_name || []).join(', ') || 'Autore sconosciuto',
+            year: it.first_publish_year ? String(it.first_publish_year) : '',
+            genre: (it.subject || [])[0] || '',
+            isbn: (it.isbn || [])[0] || '',
+            coverLg: it.cover_i ? `https://covers.openlibrary.org/b/id/${it.cover_i}-L.jpg` : ''
+          });
+        });
+      }
     }
 
     if(combined.length === 0){
@@ -978,17 +999,18 @@ async function searchOnline(query){
 
     resultsEl.innerHTML = combined.map((it, idx)=>`
       <div class="result-item" data-idx="${idx}">
-        <div class="result-cover">${it.coverLg ? `<img src="${escapeHtml(it.coverLg)}">` : ''}</div>
+        <div class="result-cover">${it.coverLg ? `<img src="${escapeHtml(it.coverLg)}" alt="">` : ''}</div>
         <div class="result-info">
           <div class="result-title">${escapeHtml(it.title)}</div>
-          <div class="result-meta">${escapeHtml(it.author)}</div>
+          <div class="result-meta">${escapeHtml(it.author)}${it.year ? ' · ' + escapeHtml(it.year) : ''}</div>
         </div>
-        <button class="btn btn-sm">Usa questo</button>
+        <button class="btn btn-sm" type="button">Usa questo</button>
       </div>`).join('');
 
     $$('.result-item', resultsEl).forEach(el=>{
       el.addEventListener('click', e=>{
         const it = combined[parseInt(e.currentTarget.dataset.idx, 10)];
+        if(!it) return;
         $('#f-title').value = it.title;
         $('#f-author').value = it.author;
         $('#f-date').value = it.year;
@@ -998,9 +1020,11 @@ async function searchOnline(query){
         addFormColor = '';
         renderCoverPreview();
         switchMode('manual');
+        showToast('Dati importati con successo!');
       });
     });
   }catch(err){
+    console.error("Errore ricerca online:", err);
     resultsEl.innerHTML = '<div class="state-msg">Errore di rete durante la ricerca.</div>';
   }
 }
@@ -1010,14 +1034,16 @@ $('#btn-search-online').addEventListener('click', ()=>{
   if(q) searchOnline(q);
 });
 
-// Ricerca ISBN robusta e sequenziale (Google Books + Open Library di riserva)
+// Ricerca ISBN robusta sequenziale (Google Books -> Open Library Search -> Open Library Direct ISBN)
 async function fetchBookByIsbn(isbn){
+  const cleanIsbn = (isbn || '').trim();
+  if(!cleanIsbn) return;
+
   try{
-    const cleanIsbn = isbn.trim();
     showToast('Cerco informazioni libro...');
     
-    // Tentativo 1: Google Books
-    let res = await fetch('https://www.googleapis.com/books/v1/volumes?q=isbn:' + cleanIsbn);
+    // 1. Google Books
+    let res = await fetch('https://www.googleapis.com/books/v1/volumes?q=isbn:' + encodeURIComponent(cleanIsbn));
     let data = await res.json();
     
     if(data && data.items && data.items.length > 0){
@@ -1038,15 +1064,15 @@ async function fetchBookByIsbn(isbn){
       return;
     }
 
-    // Tentativo 2: Open Library (Fallback)
-    res = await fetch('https://openlibrary.org/search.json?isbn=' + cleanIsbn);
+    // 2. Open Library Search API
+    res = await fetch('https://openlibrary.org/search.json?isbn=' + encodeURIComponent(cleanIsbn));
     data = await res.json();
 
     if(data && data.docs && data.docs.length > 0){
       const it = data.docs[0];
       $('#f-title').value = it.title || '';
       $('#f-author').value = (it.author_name || []).join(', ') || 'Autore sconosciuto';
-      $('#f-date').value = it.first_publish_year || '';
+      $('#f-date').value = it.first_publish_year ? String(it.first_publish_year) : '';
       $('#f-genre').innerHTML = genreOptionsHtml((it.subject || [])[0] || '');
       $('#f-barcode').value = cleanIsbn;
 
@@ -1054,17 +1080,34 @@ async function fetchBookByIsbn(isbn){
       addFormColor = '';
       renderCoverPreview();
       switchMode('manual');
-      showToast('Libro trovato e compilato!');
+      showToast('Libro trovato tramite Open Library!');
       return;
     }
 
-    // Se non lo trova da nessuna parte, compila almeno l'ISBN
+    // 3. Open Library Direct JSON API
+    res = await fetch(`https://openlibrary.org/isbn/${encodeURIComponent(cleanIsbn)}.json`);
+    if(res.ok){
+      const bookData = await res.json();
+      if(bookData && bookData.title){
+        $('#f-title').value = bookData.title || '';
+        $('#f-barcode').value = cleanIsbn;
+        addFormCover = `https://covers.openlibrary.org/b/isbn/${encodeURIComponent(cleanIsbn)}-L.jpg`;
+        addFormColor = '';
+        renderCoverPreview();
+        switchMode('manual');
+        showToast('Libro trovato!');
+        return;
+      }
+    }
+
+    // Se non trovato, compila almeno l'ISBN
     $('#f-barcode').value = cleanIsbn;
     switchMode('manual');
     showToast('ISBN registrato, ma nessun dettaglio online trovato. Compila a mano.');
 
   }catch(err){
-    $('#f-barcode').value = isbn;
+    console.error("Errore ISBN:", err);
+    $('#f-barcode').value = cleanIsbn;
     switchMode('manual');
     showToast('Errore di connessione ISBN. Inserisci i dati manualmente.');
   }
@@ -1116,7 +1159,7 @@ function renderDetailView(b, isEditing = false){
     titleEl.textContent = "Dettagli libro";
     let coverHtml = '';
     if(b.cover){
-      coverHtml = `<img src="${escapeHtml(b.cover)}">`;
+      coverHtml = `<img src="${escapeHtml(b.cover)}" alt="">`;
     } else if(b.coverColor){
       coverHtml = `<div style="width:100%; height:100%; background:${escapeHtml(b.coverColor)}; display:flex; align-items:center; justify-content:center; padding:12px; text-align:center;"><span style="color:#fff; font-family:'Fraunces', serif; font-weight:600; font-size:13px; text-shadow:0 1px 3px rgba(0,0,0,0.3);">${escapeHtml(b.title)}</span></div>`;
     } else {
@@ -1142,11 +1185,11 @@ function renderDetailView(b, isEditing = false){
 
     footer.innerHTML = `
       <div class="modal-footer-left">
-        <button class="btn btn-danger-text" id="detail-btn-delete">Elimina libro</button>
+        <button class="btn btn-danger-text" id="detail-btn-delete" type="button">Elimina libro</button>
       </div>
       <div class="modal-footer-right">
-        <button class="btn" id="detail-btn-edit">Modifica</button>
-        <button class="btn btn-primary" id="detail-btn-done">Fatto</button>
+        <button class="btn" id="detail-btn-edit" type="button">Modifica</button>
+        <button class="btn btn-primary" id="detail-btn-done" type="button">Fatto</button>
       </div>
     `;
 
@@ -1172,7 +1215,7 @@ function renderDetailView(b, isEditing = false){
         <label>Copertina</label>
         <div class="cover-picker">
           <div class="cover-preview" id="edit-cover-preview">
-            ${editModalCover ? `<img src="${escapeHtml(editModalCover)}">` : (editModalColor ? `<div style="width:100%; height:100%; background:${editModalColor};"></div>` : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 3v18" /></svg>`)}
+            ${editModalCover ? `<img src="${escapeHtml(editModalCover)}" alt="">` : (editModalColor ? `<div style="width:100%; height:100%; background:${editModalColor};"></div>` : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 3v18" /></svg>`)}
           </div>
           <div class="cover-actions">
             <button type="button" class="btn btn-sm file-btn">
@@ -1239,7 +1282,7 @@ function renderDetailView(b, isEditing = false){
           canvas.getContext('2d').drawImage(img, 0, 0, 200, 300);
           editModalCover = canvas.toDataURL('image/jpeg', 0.75);
           editModalColor = '';
-          $('#edit-cover-preview').innerHTML = `<img src="${escapeHtml(editModalCover)}">`;
+          $('#edit-cover-preview').innerHTML = `<img src="${escapeHtml(editModalCover)}" alt="">`;
         };
         img.src = ev.target.result;
       };
@@ -1261,8 +1304,8 @@ function renderDetailView(b, isEditing = false){
     footer.innerHTML = `
       <div class="modal-footer-left"></div>
       <div class="modal-footer-right">
-        <button class="btn" id="edit-btn-cancel">Annulla</button>
-        <button class="btn btn-primary" id="edit-btn-save">Salva modifiche</button>
+        <button class="btn" id="edit-btn-cancel" type="button">Annulla</button>
+        <button class="btn btn-primary" id="edit-btn-save" type="button">Salva modifiche</button>
       </div>
     `;
 
