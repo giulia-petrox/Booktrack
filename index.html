@@ -309,8 +309,9 @@ header.masthead{
 .modal-body{ padding:20px 22px; overflow-y:auto; }
 .modal-footer{
   padding:16px 22px; border-top:1px solid var(--line-soft);
-  display:flex; justify-content:flex-end; gap:10px; flex-shrink:0;
+  display:flex; justify-content:space-between; align-items:center; flex-shrink:0;
 }
+.modal-footer-right{ display:flex; gap:10px; }
 
 /* ---------- Tabs (add modal) ---------- */
 .mode-tabs{ display:flex; gap:4px; padding:0 22px; border-bottom:1px solid var(--line-soft); flex-shrink:0; }
@@ -383,16 +384,6 @@ header.masthead{
 .scan-manual{ margin-top:16px; }
 
 /* ---------- Detail modal ---------- */
-.detail-top{ display:flex; gap:18px; }
-.detail-cover{ width:118px; height:178px; border-radius:12px; overflow:hidden; flex-shrink:0; background:var(--bg-deep); box-shadow:0 6px 16px rgba(90,66,40,0.2); }
-.detail-cover img{ width:100%; height:100%; object-fit:cover; }
-.detail-info h3{ font-family:'Fraunces', serif; font-weight:600; font-size:20px; margin:0 0 4px; line-height:1.2; }
-.detail-info .detail-author{ font-size:14px; color:var(--ink-soft); margin-bottom:10px; }
-.detail-meta{ font-size:12.5px; color:var(--ink-soft); line-height:1.9; }
-.detail-meta b{ color:var(--ink); font-weight:600; }
-.detail-divider{ height:1px; background:var(--line-soft); margin:18px 0; }
-.rating-block{ display:flex; align-items:center; gap:10px; margin-top:12px; }
-.rating-block .star-row{ cursor:pointer; }
 .badge{ display:inline-flex; align-items:center; padding:4px 12px; border-radius:var(--radius-pill); font-size:11.5px; font-weight:700; letter-spacing:.01em; }
 .badge-toread{ background:var(--amber-status-bg); color:var(--amber-status); }
 .badge-reading{ background:var(--burgundy-status-bg); color:var(--burgundy-status); }
@@ -419,7 +410,6 @@ header.masthead{
   .masthead-inner{ padding:0 16px; }
   .grid{ grid-template-columns:repeat(auto-fill, minmax(130px,1fr)); gap:14px 12px; }
   .field-row{ grid-template-columns:1fr; }
-  .detail-top{ flex-direction:column; align-items:center; text-align:center; }
 }
 </style>
 </head>
@@ -581,9 +571,9 @@ header.masthead{
 
 <!-- ============ DETAIL / EDIT MODAL ============ -->
 <div class="overlay" id="detail-overlay" style="display:none;">
-  <div class="modal">
+  <div class="modal modal-wide">
     <div class="modal-header">
-      <h2>Dettagli libro</h2>
+      <h2>Modifica / Dettagli libro</h2>
       <button class="modal-close" id="detail-modal-close">
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12" stroke-linecap="round"/></svg>
       </button>
@@ -591,7 +581,10 @@ header.masthead{
     <div class="modal-body" id="detail-body"></div>
     <div class="modal-footer">
       <button class="btn btn-danger-text" id="detail-delete">Elimina libro</button>
-      <button class="btn btn-primary" id="detail-close-btn">Fatto</button>
+      <div class="modal-footer-right">
+        <button class="btn" id="detail-close-btn">Annulla</button>
+        <button class="btn btn-primary" id="detail-save">Salva modifiche</button>
+      </div>
     </div>
   </div>
 </div>
@@ -914,14 +907,12 @@ $('#add-save').addEventListener('click', async ()=>{
   showToast('Libro aggiunto alla libreria.');
 });
 
-/* ---------------- Search online (Combinata: Google Books + Open Library) ---------------- */
+/* ---------------- Search online ---------------- */
 async function searchOnline(query){
   const resultsEl = $('#search-results');
   resultsEl.innerHTML = '<div class="state-msg"><div class="loading-spinner"></div></div>';
   const q = encodeURIComponent(query);
 
-  // Eseguiamo le chiamate in parallelo su entrambi i database.
-  // Il "catch" previene il blocco totale se uno dei due servizi restituisce un errore (es. AdBlock o Rate Limit).
   const fetchGoogle = fetch('https://www.googleapis.com/books/v1/volumes?maxResults=10&q=' + q).then(r=>r.json()).catch(()=>null);
   const fetchOpenLib = fetch('https://openlibrary.org/search.json?limit=10&q=' + q).then(r=>r.json()).catch(()=>null);
 
@@ -929,7 +920,6 @@ async function searchOnline(query){
     const [googleData, openData] = await Promise.all([fetchGoogle, fetchOpenLib]);
     let combined = [];
 
-    // 1. Mappiamo i dati in arrivo da Google Books
     if(googleData && googleData.items){
       googleData.items.forEach(it => {
         const info = it.volumeInfo || {};
@@ -941,12 +931,11 @@ async function searchOnline(query){
           genre: (info.categories||[])[0] || '',
           isbn: ((info.industryIdentifiers||[]).find(i=> i.type==='ISBN_13') || (info.industryIdentifiers||[])[0] || {}).identifier || '',
           coverSm: thumb ? thumb.replace('http://','https://') : '',
-          coverLg: thumb ? thumb.replace('http://','https://').replace('&edge=curl', '') : '' // Tenta di rimuovere l'effetto "arricciatura" della pagina se presente
+          coverLg: thumb ? thumb.replace('http://','https://').replace('&edge=curl', '') : ''
         });
       });
     }
 
-    // 2. Mappiamo i dati in arrivo da Open Library
     if(openData && openData.docs){
       openData.docs.forEach(it => {
         combined.push({
@@ -966,10 +955,8 @@ async function searchOnline(query){
       return;
     }
 
-    // Rimuoviamo i doppioni identici (libri con stesso titolo e stesso autore)
     combined = combined.filter((v,i,a)=>a.findIndex(t=>(t.title===v.title && t.author===v.author))===i);
 
-    // Renderizziamo i risultati
     resultsEl.innerHTML = combined.map((it, idx)=>{
       return `
       <div class="result-item" data-idx="${idx}">
@@ -982,7 +969,6 @@ async function searchOnline(query){
       </div>`;
     }).join('');
 
-    // Ascoltiamo i click per popolare il modulo manuale
     $$('.result-item', resultsEl).forEach(el=>{
       el.addEventListener('click', (e)=>{
         const idx = e.currentTarget.dataset.idx;
@@ -1017,7 +1003,7 @@ $('#search-online-input').addEventListener('keydown', e=>{
   if(e.key === 'Enter'){ e.preventDefault(); $('#btn-search-online').click(); }
 });
 
-/* ---------------- Barcode scan (Combinata) ---------------- */
+/* ---------------- Barcode scan ---------------- */
 async function startScanner(){
   const statusEl = $('#scan-status');
   if(typeof Html5Qrcode === 'undefined'){
@@ -1063,16 +1049,12 @@ async function onScanSuccess(decodedText){
   
   try{
     const q = encodeURIComponent(decodedText);
-    
-    // Ricerca tramite ISBN su entrambi i database contemporaneamente
     const fetchGoogle = fetch('https://www.googleapis.com/books/v1/volumes?q=isbn:' + q).then(r=>r.json()).catch(()=>null);
     const fetchOpenLib = fetch('https://openlibrary.org/search.json?isbn=' + q).then(r=>r.json()).catch(()=>null);
     
     const [googleData, openData] = await Promise.all([fetchGoogle, fetchOpenLib]);
-    
     let found = null;
     
-    // Controlliamo prima se l'ha trovato Google
     if(googleData && googleData.items && googleData.items.length > 0){
         const info = googleData.items[0].volumeInfo || {};
         const thumb = info.imageLinks ? (info.imageLinks.thumbnail || info.imageLinks.smallThumbnail) : '';
@@ -1085,7 +1067,6 @@ async function onScanSuccess(decodedText){
           coverSm: thumb ? thumb.replace('http://','https://') : '',
           coverLg: thumb ? thumb.replace('http://','https://').replace('&edge=curl', '') : ''
         };
-    // Se Google non ha niente, controlliamo Open Library
     } else if (openData && openData.docs && openData.docs.length > 0) {
         const it = openData.docs[0];
         found = {
@@ -1116,65 +1097,147 @@ $('#btn-scan-start').addEventListener('click', startScanner);
 /* ============================================================
    DETAIL / EDIT MODAL
    ============================================================ */
+let editModalCover = '';
+
 function openDetail(id){
   selectedBookId = id;
   const b = books.find(x=> x.id===id);
   if(!b) return;
+  editModalCover = b.cover || '';
+
   const body = $('#detail-body');
   body.innerHTML = `
-    <div class="detail-top">
-      <div class="detail-cover">${b.cover ? `<img src="${escapeHtml(b.cover)}">` : `<div class="cover-placeholder" style="height:100%"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 3v18"/></svg></div>`}</div>
-      <div class="detail-info">
-        <span class="badge ${statusBadgeClass(b.status)}">${statusLabel(b.status)}</span>
-        <h3 style="margin-top:8px;">${escapeHtml(b.title)}</h3>
-        <div class="detail-author">${escapeHtml(b.author || 'Autore sconosciuto')}</div>
-        <div class="detail-meta">
-          ${b.genre ? `<div><b>Genere:</b> ${escapeHtml(b.genre)}</div>` : ''}
-          ${b.publishDate ? `<div><b>Pubblicazione:</b> ${escapeHtml(b.publishDate)}</div>` : ''}
-          ${b.barcode ? `<div><b>Codice a barre:</b> ${escapeHtml(b.barcode)}</div>` : ''}
+    <div class="field">
+      <label>Copertina</label>
+      <div class="cover-picker">
+        <div class="cover-preview" id="edit-cover-preview">
+          ${editModalCover ? `<img src="${escapeHtml(editModalCover)}">` : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 3v18" /></svg>`}
         </div>
-        <div class="rating-block">
-          <div class="star-row lg" id="detail-rating">${starsMarkup(b.rating||0)}</div>
+        <div class="cover-actions">
+          <button type="button" class="btn btn-sm file-btn">
+            Carica immagine
+            <input type="file" accept="image/*" id="edit-cover-file-input">
+          </button>
+          <button type="button" class="btn btn-ghost btn-sm" id="edit-btn-clear-cover">Rimuovi</button>
         </div>
       </div>
     </div>
-    <div class="detail-divider"></div>
+    <div class="field-row">
+      <div class="field">
+        <label>Titolo *</label>
+        <input type="text" id="edit-title" value="${escapeHtml(b.title)}">
+      </div>
+      <div class="field">
+        <label>Autore</label>
+        <input type="text" id="edit-author" value="${escapeHtml(b.author)}">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Data di pubblicazione</label>
+        <input type="text" id="edit-date" value="${escapeHtml(b.publishDate || '')}">
+      </div>
+      <div class="field">
+        <label>Genere</label>
+        <input type="text" id="edit-genre" value="${escapeHtml(b.genre || '')}">
+      </div>
+    </div>
+    <div class="field">
+      <label>Codice a barre (ISBN)</label>
+      <input type="text" id="edit-barcode" value="${escapeHtml(b.barcode || '')}">
+    </div>
     <div class="field">
       <label>Stato di lettura</label>
-      <div class="status-picker" id="detail-status-picker">
+      <div class="status-picker" id="edit-status-picker">
         <button type="button" class="status-choice ${b.status==='toread'?'active':''}" data-status="toread">Da leggere</button>
         <button type="button" class="status-choice ${b.status==='reading'?'active':''}" data-status="reading">In corso</button>
         <button type="button" class="status-choice ${b.status==='read'?'active':''}" data-status="read">Letto</button>
       </div>
     </div>
+    <div class="field">
+      <label>La tua valutazione</label>
+      <div class="star-row lg" id="edit-rating" data-value="${b.rating||0}">${starsMarkup(b.rating||0)}</div>
+    </div>
   `;
-  $('#detail-rating').addEventListener('click', async e=>{
-    const star = e.target.closest('.star');
-    if(!star) return;
-    b.rating = parseInt(star.dataset.i, 10);
-    $('#detail-rating').innerHTML = starsMarkup(b.rating);
-    await saveBooks();
-    render();
-  });
-  $('#detail-status-picker').addEventListener('click', async e=>{
+
+  let currentEditStatus = b.status;
+  let currentEditRating = b.rating || 0;
+
+  $('#edit-status-picker').addEventListener('click', e=>{
     const btn = e.target.closest('.status-choice');
     if(!btn) return;
-    b.status = btn.dataset.status;
-    $$('.status-choice', $('#detail-status-picker')).forEach(c=> c.classList.toggle('active', c===btn));
-    $('.badge', body).className = 'badge ' + statusBadgeClass(b.status);
-    $('.badge', body).textContent = statusLabel(b.status);
+    currentEditStatus = btn.dataset.status;
+    $$('.status-choice', $('#edit-status-picker')).forEach(c=> c.classList.toggle('active', c===btn));
+  });
+
+  $('#edit-rating').addEventListener('click', e=>{
+    const star = e.target.closest('.star');
+    if(!star) return;
+    currentEditRating = parseInt(star.dataset.i, 10);
+    $('#edit-rating').innerHTML = starsMarkup(currentEditRating);
+  });
+
+  $('#edit-cover-file-input').addEventListener('change', e=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ev=>{
+      const img = new Image();
+      img.onload = ()=>{
+        const maxW = 320;
+        const scale = Math.min(1, maxW / img.width);
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        editModalCover = canvas.toDataURL('image/jpeg', 0.75);
+        $('#edit-cover-preview').innerHTML = `<img src="${escapeHtml(editModalCover)}">`;
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  $('#edit-btn-clear-cover').addEventListener('click', ()=>{
+    editModalCover = '';
+    $('#edit-cover-preview').innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 3v18" /></svg>`;
+  });
+
+  $('#detail-save').onclick = async () => {
+    const title = $('#edit-title').value.trim();
+    const author = $('#edit-author').value.trim() || 'Autore sconosciuto';
+    if(!title){
+      showToast('Il titolo è obbligatorio.');
+      return;
+    }
+    b.title = title;
+    b.author = author;
+    b.publishDate = $('#edit-date').value.trim();
+    b.genre = $('#edit-genre').value.trim();
+    b.barcode = $('#edit-barcode').value.trim();
+    b.status = currentEditStatus;
+    b.rating = currentEditRating;
+    b.cover = editModalCover;
+
     await saveBooks();
     render();
-  });
+    closeDetail();
+    showToast('Modifiche salvate con successo.');
+  };
+
   $('#detail-overlay').style.display = 'flex';
 }
+
 function closeDetail(){
   $('#detail-overlay').style.display = 'none';
   selectedBookId = null;
 }
+
 $('#detail-modal-close').addEventListener('click', closeDetail);
 $('#detail-close-btn').addEventListener('click', closeDetail);
 $('#detail-overlay').addEventListener('click', e=>{ if(e.target.id==='detail-overlay') closeDetail(); });
+
 $('#detail-delete').addEventListener('click', async ()=>{
   if(!selectedBookId) return;
   const b = books.find(x=> x.id===selectedBookId);
