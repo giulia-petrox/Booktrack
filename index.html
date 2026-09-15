@@ -557,7 +557,7 @@ header.masthead{
           <button class="btn btn-primary btn-sm" id="btn-search-online">Cerca</button>
         </div>
         <div class="result-list" id="search-results">
-          <div class="state-msg">Cerca un titolo per iniziare — i risultati arrivano da Google Books.</div>
+          <div class="state-msg">Cerca un titolo per iniziare — i risultati arrivano da Open Library.</div>
         </div>
       </div>
 
@@ -630,7 +630,7 @@ function showToast(msg){
   showToast._t = setTimeout(()=> t.classList.remove('show'), 2600);
 }
 
-/* ---------------- Storage (browser localStorage: dati salvati solo su questo dispositivo/browser) ---------------- */
+/* ---------------- Storage ---------------- */
 async function loadBooks(){
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -664,9 +664,6 @@ function statusLabel(s){
 }
 function statusBadgeClass(s){
   return {toread:'badge-toread', reading:'badge-reading', read:'badge-read'}[s] || '';
-}
-function statusStripeClass(s){
-  return {toread:'stripe-toread', reading:'stripe-reading', read:'stripe-read'}[s] || '';
 }
 
 function getFilteredBooks(){
@@ -815,7 +812,7 @@ function resetAddForm(){
   renderCoverPreview();
   $$('.status-choice').forEach(c=> c.classList.toggle('active', c.dataset.status===addFormStatus));
   $('#search-online-input').value = '';
-  $('#search-results').innerHTML = '<div class="state-msg">Cerca un titolo per iniziare — i risultati arrivano da Google Books.</div>';
+  $('#search-results').innerHTML = '<div class="state-msg">Cerca un titolo per iniziare — i risultati arrivano da Open Library.</div>';
 }
 
 function renderCoverPreview(){
@@ -850,7 +847,6 @@ function switchMode(mode){
 }
 $$('.mode-tab').forEach(t=> t.addEventListener('click', ()=> switchMode(t.dataset.mode)));
 
-/* Status picker in add form */
 $('#f-status-picker').addEventListener('click', e=>{
   const btn = e.target.closest('.status-choice');
   if(!btn) return;
@@ -858,7 +854,6 @@ $('#f-status-picker').addEventListener('click', e=>{
   $$('.status-choice').forEach(c=> c.classList.toggle('active', c===btn));
 });
 
-/* Rating widget in add form */
 $('#f-rating').innerHTML = starsMarkup(0);
 $('#f-rating').addEventListener('click', e=>{
   const star = e.target.closest('.star');
@@ -867,7 +862,6 @@ $('#f-rating').addEventListener('click', e=>{
   $('#f-rating').innerHTML = starsMarkup(addFormRating);
 });
 
-/* Cover upload -> resized base64 */
 $('#cover-file-input').addEventListener('change', e=>{
   const file = e.target.files[0];
   if(!file) return;
@@ -894,10 +888,9 @@ $('#btn-clear-cover').addEventListener('click', ()=>{
   renderCoverPreview();
 });
 
-/* Save book from manual/confirm form */
 $('#add-save').addEventListener('click', async ()=>{
   const title = $('#f-title').value.trim();
-  const author = $('#f-author').value.trim() || 'Autore sconosciuto'; /* Risolto: l'autore può mancare da API */
+  const author = $('#f-author').value.trim() || 'Autore sconosciuto';
   if(!title){
     showToast('Il titolo è obbligatorio.');
     return;
@@ -920,34 +913,38 @@ $('#add-save').addEventListener('click', async ()=>{
   showToast('Libro aggiunto alla libreria.');
 });
 
-/* ---------------- Search online (Google Books) ---------------- */
+/* ---------------- Search online (Ora usa Open Library) ---------------- */
 async function searchOnline(query){
   const resultsEl = $('#search-results');
   resultsEl.innerHTML = '<div class="state-msg"><div class="loading-spinner"></div></div>';
   try{
-    const resp = await fetch('https://www.googleapis.com/books/v1/volumes?maxResults=12&q=' + encodeURIComponent(query));
+    // Cambiato l'endpoint API: da Google Books a Open Library
+    const resp = await fetch('https://openlibrary.org/search.json?q=' + encodeURIComponent(query) + '&limit=12');
     if(!resp.ok) throw new Error('network');
     const data = await resp.json();
-    const items = data.items || [];
+    const items = data.docs || [];
     if(items.length === 0){
       resultsEl.innerHTML = '<div class="state-msg">Nessun risultato. Prova un altro termine o inserisci il libro a mano.</div>';
       return;
     }
+    
     resultsEl.innerHTML = items.map((it, idx)=>{
-      const info = it.volumeInfo || {};
-      const thumb = info.imageLinks ? (info.imageLinks.thumbnail || info.imageLinks.smallThumbnail) : '';
+      const thumb = it.cover_i ? `https://covers.openlibrary.org/b/id/${it.cover_i}-M.jpg` : '';
+      const title = it.title || 'Senza titolo';
+      const author = (it.author_name || []).join(', ') || 'Autore sconosciuto';
+      const year = it.first_publish_year || '';
+
       return `
       <div class="result-item" data-idx="${idx}">
-        <div class="result-cover">${thumb ? `<img src="${escapeHtml(thumb.replace('http://','https://'))}">` : ''}</div>
+        <div class="result-cover">${thumb ? `<img src="${escapeHtml(thumb)}">` : ''}</div>
         <div class="result-info">
-          <div class="result-title">${escapeHtml(info.title || 'Senza titolo')}</div>
-          <div class="result-meta">${escapeHtml((info.authors||[]).join(', ') || 'Autore sconosciuto')}${info.publishedDate ? ' · ' + escapeHtml(info.publishedDate.slice(0,4)) : ''}</div>
+          <div class="result-title">${escapeHtml(title)}</div>
+          <div class="result-meta">${escapeHtml(author)}${year ? ' · ' + escapeHtml(year) : ''}</div>
         </div>
         <button class="btn btn-sm" data-idx="${idx}">Usa questo</button>
       </div>`;
     }).join('');
     
-    /* Risolto: evento agganciato solo all'item principale per evitare chiamate duplicate */
     $$('.result-item', resultsEl).forEach(el=>{
       el.addEventListener('click', (e)=>{
         const idx = el.dataset.idx;
@@ -956,21 +953,23 @@ async function searchOnline(query){
       });
     });
   }catch(err){
-    resultsEl.innerHTML = '<div class="state-msg">Non riesco a raggiungere Google Books in questo momento. Puoi comunque inserire il libro a mano.</div>';
+    resultsEl.innerHTML = '<div class="state-msg">Non riesco a raggiungere il server di ricerca in questo momento. Inserisci il libro a mano.</div>';
   }
 }
 
 function applyOnlineResult(item){
-  const info = item.volumeInfo || {};
-  $('#f-title').value = info.title || '';
-  $('#f-author').value = (info.authors||[]).join(', ');
-  $('#f-date').value = info.publishedDate || '';
-  $('#f-genre').value = (info.categories||[])[0] || '';
-  const isbn = (info.industryIdentifiers||[]).find(i=> i.type==='ISBN_13') || (info.industryIdentifiers||[])[0];
-  $('#f-barcode').value = isbn ? isbn.identifier : '';
-  const thumb = info.imageLinks ? (info.imageLinks.thumbnail || info.imageLinks.smallThumbnail) : '';
-  addFormCover = thumb ? thumb.replace('http://','https://') : '';
+  $('#f-title').value = item.title || '';
+  $('#f-author').value = (item.author_name || []).join(', ') || 'Autore sconosciuto';
+  $('#f-date').value = item.first_publish_year || '';
+  $('#f-genre').value = (item.subject || [])[0] || '';
+  
+  const isbn = (item.isbn || [])[0] || '';
+  $('#f-barcode').value = isbn;
+  
+  const thumb = item.cover_i ? `https://covers.openlibrary.org/b/id/${item.cover_i}-L.jpg` : '';
+  addFormCover = thumb;
   renderCoverPreview();
+  
   switchMode('manual');
   showToast('Dati importati — controlla e conferma.');
 }
@@ -984,7 +983,7 @@ $('#search-online-input').addEventListener('keydown', e=>{
   if(e.key === 'Enter'){ e.preventDefault(); $('#btn-search-online').click(); }
 });
 
-/* ---------------- Barcode scan ---------------- */
+/* ---------------- Barcode scan (Ora usa Open Library) ---------------- */
 async function startScanner(){
   const statusEl = $('#scan-status');
   if(typeof Html5Qrcode === 'undefined'){
@@ -1028,9 +1027,10 @@ async function onScanSuccess(decodedText){
   $('#scan-status').textContent = 'Codice rilevato: ' + decodedText + ' — sto cercando i dettagli…';
   $('#f-barcode').value = decodedText;
   try{
-    const resp = await fetch('https://www.googleapis.com/books/v1/volumes?q=isbn:' + encodeURIComponent(decodedText));
+    // Cerca tramite ISBN su Open Library
+    const resp = await fetch('https://openlibrary.org/search.json?isbn=' + encodeURIComponent(decodedText));
     const data = await resp.json();
-    const item = (data.items || [])[0];
+    const item = (data.docs || [])[0];
     if(item){
       applyOnlineResult(item);
       $('#f-barcode').value = decodedText;
