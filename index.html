@@ -361,6 +361,7 @@ header.masthead{
 .result-item{
   display:flex; gap:12px; padding:10px; border-radius:14px;
   border:1px solid transparent; align-items:center;
+  cursor:pointer;
 }
 .result-item:hover{ background:var(--bg-deep); border-color:var(--line); }
 .result-cover{ width:42px; height:62px; flex-shrink:0; border-radius:8px; overflow:hidden; background:var(--bg-deep); display:flex; align-items:center; justify-content:center; }
@@ -368,7 +369,7 @@ header.masthead{
 .result-info{ flex:1; min-width:0; }
 .result-title{ font-family:'Fraunces', serif; font-weight:600; font-size:14px; color:var(--ink); line-height:1.25; }
 .result-meta{ font-size:12px; color:var(--ink-soft); margin-top:2px; }
-.result-item button{ flex-shrink:0; }
+.result-item button{ flex-shrink:0; pointer-events:none; }
 .state-msg{ text-align:center; padding:34px 12px; color:var(--ink-soft); font-size:13.5px; }
 
 /* ---------- Scan panel ---------- */
@@ -495,7 +496,7 @@ header.masthead{
     </div>
     <div class="modal-body">
 
-      <!-- Manual form (also used to confirm scan/search results) -->
+      <!-- Manual form -->
       <div id="panel-manual">
         <div class="field">
           <label>Copertina</label>
@@ -557,7 +558,7 @@ header.masthead{
           <button class="btn btn-primary btn-sm" id="btn-search-online">Cerca</button>
         </div>
         <div class="result-list" id="search-results">
-          <div class="state-msg">Cerca un titolo per iniziare — i risultati arrivano da Open Library.</div>
+          <div class="state-msg">Cerca un titolo per iniziare — i risultati arrivano da Google Books e Open Library.</div>
         </div>
       </div>
 
@@ -812,7 +813,7 @@ function resetAddForm(){
   renderCoverPreview();
   $$('.status-choice').forEach(c=> c.classList.toggle('active', c.dataset.status===addFormStatus));
   $('#search-online-input').value = '';
-  $('#search-results').innerHTML = '<div class="state-msg">Cerca un titolo per iniziare — i risultati arrivano da Open Library.</div>';
+  $('#search-results').innerHTML = '<div class="state-msg">Cerca un titolo per iniziare — i risultati arrivano da Google Books e Open Library.</div>';
 }
 
 function renderCoverPreview(){
@@ -913,63 +914,96 @@ $('#add-save').addEventListener('click', async ()=>{
   showToast('Libro aggiunto alla libreria.');
 });
 
-/* ---------------- Search online (Ora usa Open Library) ---------------- */
+/* ---------------- Search online (Combinata: Google Books + Open Library) ---------------- */
 async function searchOnline(query){
   const resultsEl = $('#search-results');
   resultsEl.innerHTML = '<div class="state-msg"><div class="loading-spinner"></div></div>';
+  const q = encodeURIComponent(query);
+
+  // Eseguiamo le chiamate in parallelo su entrambi i database.
+  // Il "catch" previene il blocco totale se uno dei due servizi restituisce un errore (es. AdBlock o Rate Limit).
+  const fetchGoogle = fetch('https://www.googleapis.com/books/v1/volumes?maxResults=10&q=' + q).then(r=>r.json()).catch(()=>null);
+  const fetchOpenLib = fetch('https://openlibrary.org/search.json?limit=10&q=' + q).then(r=>r.json()).catch(()=>null);
+
   try{
-    // Cambiato l'endpoint API: da Google Books a Open Library
-    const resp = await fetch('https://openlibrary.org/search.json?q=' + encodeURIComponent(query) + '&limit=12');
-    if(!resp.ok) throw new Error('network');
-    const data = await resp.json();
-    const items = data.docs || [];
-    if(items.length === 0){
-      resultsEl.innerHTML = '<div class="state-msg">Nessun risultato. Prova un altro termine o inserisci il libro a mano.</div>';
+    const [googleData, openData] = await Promise.all([fetchGoogle, fetchOpenLib]);
+    let combined = [];
+
+    // 1. Mappiamo i dati in arrivo da Google Books
+    if(googleData && googleData.items){
+      googleData.items.forEach(it => {
+        const info = it.volumeInfo || {};
+        const thumb = info.imageLinks ? (info.imageLinks.thumbnail || info.imageLinks.smallThumbnail) : '';
+        combined.push({
+          title: info.title || '',
+          author: (info.authors||[]).join(', ') || 'Autore sconosciuto',
+          year: info.publishedDate ? info.publishedDate.slice(0,4) : '',
+          genre: (info.categories||[])[0] || '',
+          isbn: ((info.industryIdentifiers||[]).find(i=> i.type==='ISBN_13') || (info.industryIdentifiers||[])[0] || {}).identifier || '',
+          coverSm: thumb ? thumb.replace('http://','https://') : '',
+          coverLg: thumb ? thumb.replace('http://','https://').replace('&edge=curl', '') : '' // Tenta di rimuovere l'effetto "arricciatura" della pagina se presente
+        });
+      });
+    }
+
+    // 2. Mappiamo i dati in arrivo da Open Library
+    if(openData && openData.docs){
+      openData.docs.forEach(it => {
+        combined.push({
+          title: it.title || '',
+          author: (it.author_name || []).join(', ') || 'Autore sconosciuto',
+          year: it.first_publish_year || '',
+          genre: (it.subject || [])[0] || '',
+          isbn: (it.isbn || [])[0] || '',
+          coverSm: it.cover_i ? `https://covers.openlibrary.org/b/id/${it.cover_i}-M.jpg` : '',
+          coverLg: it.cover_i ? `https://covers.openlibrary.org/b/id/${it.cover_i}-L.jpg` : ''
+        });
+      });
+    }
+
+    if(combined.length === 0){
+      resultsEl.innerHTML = '<div class="state-msg">Nessun risultato da entrambi i database. Prova un altro termine o inserisci il libro a mano.</div>';
       return;
     }
-    
-    resultsEl.innerHTML = items.map((it, idx)=>{
-      const thumb = it.cover_i ? `https://covers.openlibrary.org/b/id/${it.cover_i}-M.jpg` : '';
-      const title = it.title || 'Senza titolo';
-      const author = (it.author_name || []).join(', ') || 'Autore sconosciuto';
-      const year = it.first_publish_year || '';
 
+    // Rimuoviamo i doppioni identici (libri con stesso titolo e stesso autore)
+    combined = combined.filter((v,i,a)=>a.findIndex(t=>(t.title===v.title && t.author===v.author))===i);
+
+    // Renderizziamo i risultati
+    resultsEl.innerHTML = combined.map((it, idx)=>{
       return `
       <div class="result-item" data-idx="${idx}">
-        <div class="result-cover">${thumb ? `<img src="${escapeHtml(thumb)}">` : ''}</div>
+        <div class="result-cover">${it.coverSm ? `<img src="${escapeHtml(it.coverSm)}">` : ''}</div>
         <div class="result-info">
-          <div class="result-title">${escapeHtml(title)}</div>
-          <div class="result-meta">${escapeHtml(author)}${year ? ' · ' + escapeHtml(year) : ''}</div>
+          <div class="result-title">${escapeHtml(it.title || 'Senza titolo')}</div>
+          <div class="result-meta">${escapeHtml(it.author)}${it.year ? ' · ' + escapeHtml(it.year) : ''}</div>
         </div>
-        <button class="btn btn-sm" data-idx="${idx}">Usa questo</button>
+        <button class="btn btn-sm" tabindex="-1">Usa questo</button>
       </div>`;
     }).join('');
-    
+
+    // Ascoltiamo i click per popolare il modulo manuale
     $$('.result-item', resultsEl).forEach(el=>{
       el.addEventListener('click', (e)=>{
-        const idx = el.dataset.idx;
+        const idx = e.currentTarget.dataset.idx;
         if(idx===undefined) return;
-        applyOnlineResult(items[parseInt(idx,10)]);
+        applyCombinedResult(combined[parseInt(idx,10)]);
       });
     });
+
   }catch(err){
-    resultsEl.innerHTML = '<div class="state-msg">Non riesco a raggiungere il server di ricerca in questo momento. Inserisci il libro a mano.</div>';
+    resultsEl.innerHTML = '<div class="state-msg">Si è verificato un errore di rete generale. Inserisci il libro a mano.</div>';
   }
 }
 
-function applyOnlineResult(item){
-  $('#f-title').value = item.title || '';
-  $('#f-author').value = (item.author_name || []).join(', ') || 'Autore sconosciuto';
-  $('#f-date').value = item.first_publish_year || '';
-  $('#f-genre').value = (item.subject || [])[0] || '';
-  
-  const isbn = (item.isbn || [])[0] || '';
-  $('#f-barcode').value = isbn;
-  
-  const thumb = item.cover_i ? `https://covers.openlibrary.org/b/id/${item.cover_i}-L.jpg` : '';
-  addFormCover = thumb;
+function applyCombinedResult(it){
+  $('#f-title').value = it.title || '';
+  $('#f-author').value = it.author || 'Autore sconosciuto';
+  $('#f-date').value = it.year || '';
+  $('#f-genre').value = it.genre || '';
+  $('#f-barcode').value = it.isbn || '';
+  addFormCover = it.coverLg || it.coverSm || '';
   renderCoverPreview();
-  
   switchMode('manual');
   showToast('Dati importati — controlla e conferma.');
 }
@@ -983,7 +1017,7 @@ $('#search-online-input').addEventListener('keydown', e=>{
   if(e.key === 'Enter'){ e.preventDefault(); $('#btn-search-online').click(); }
 });
 
-/* ---------------- Barcode scan (Ora usa Open Library) ---------------- */
+/* ---------------- Barcode scan (Combinata) ---------------- */
 async function startScanner(){
   const statusEl = $('#scan-status');
   if(typeof Html5Qrcode === 'undefined'){
@@ -1026,14 +1060,47 @@ async function onScanSuccess(decodedText){
   stopScanner();
   $('#scan-status').textContent = 'Codice rilevato: ' + decodedText + ' — sto cercando i dettagli…';
   $('#f-barcode').value = decodedText;
+  
   try{
-    // Cerca tramite ISBN su Open Library
-    const resp = await fetch('https://openlibrary.org/search.json?isbn=' + encodeURIComponent(decodedText));
-    const data = await resp.json();
-    const item = (data.docs || [])[0];
-    if(item){
-      applyOnlineResult(item);
-      $('#f-barcode').value = decodedText;
+    const q = encodeURIComponent(decodedText);
+    
+    // Ricerca tramite ISBN su entrambi i database contemporaneamente
+    const fetchGoogle = fetch('https://www.googleapis.com/books/v1/volumes?q=isbn:' + q).then(r=>r.json()).catch(()=>null);
+    const fetchOpenLib = fetch('https://openlibrary.org/search.json?isbn=' + q).then(r=>r.json()).catch(()=>null);
+    
+    const [googleData, openData] = await Promise.all([fetchGoogle, fetchOpenLib]);
+    
+    let found = null;
+    
+    // Controlliamo prima se l'ha trovato Google
+    if(googleData && googleData.items && googleData.items.length > 0){
+        const info = googleData.items[0].volumeInfo || {};
+        const thumb = info.imageLinks ? (info.imageLinks.thumbnail || info.imageLinks.smallThumbnail) : '';
+        found = {
+          title: info.title || '',
+          author: (info.authors||[]).join(', ') || 'Autore sconosciuto',
+          year: info.publishedDate ? info.publishedDate.slice(0,4) : '',
+          genre: (info.categories||[])[0] || '',
+          isbn: decodedText,
+          coverSm: thumb ? thumb.replace('http://','https://') : '',
+          coverLg: thumb ? thumb.replace('http://','https://').replace('&edge=curl', '') : ''
+        };
+    // Se Google non ha niente, controlliamo Open Library
+    } else if (openData && openData.docs && openData.docs.length > 0) {
+        const it = openData.docs[0];
+        found = {
+          title: it.title || '',
+          author: (it.author_name || []).join(', ') || 'Autore sconosciuto',
+          year: it.first_publish_year || '',
+          genre: (it.subject || [])[0] || '',
+          isbn: decodedText,
+          coverSm: it.cover_i ? `https://covers.openlibrary.org/b/id/${it.cover_i}-M.jpg` : '',
+          coverLg: it.cover_i ? `https://covers.openlibrary.org/b/id/${it.cover_i}-L.jpg` : ''
+        };
+    }
+
+    if(found){
+      applyCombinedResult(found);
     } else {
       switchMode('manual');
       showToast('Codice rilevato, ma nessuna corrispondenza online. Completa i dati a mano.');
