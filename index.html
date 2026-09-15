@@ -265,7 +265,6 @@ header.masthead{
   width:100%; height:100%;
   display:flex; flex-direction:column; align-items:center; justify-content:center;
   padding:12px; text-align:center;
-  pointer-events:none;
 }
 .cover-solid .solid-title{
   font-family:'Fraunces', serif; font-weight:600; font-size:13px;
@@ -273,7 +272,7 @@ header.masthead{
   display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden;
 }
 
-.card-body{ padding:10px 10px 12px; display:flex; flex-direction:column; gap:4px; flex:1; pointer-events:none; }
+.card-body{ padding:10px 10px 12px; display:flex; flex-direction:column; gap:4px; flex:1; }
 .card-title{
   font-family:'Fraunces', serif; font-weight:600; font-size:13.5px;
   line-height:1.2; color:var(--ink);
@@ -781,7 +780,7 @@ function render(){
   }
 }
 
-// Gestione centralizzata dei clic sulle schede (Event Delegation)
+// Gestione centralizzata dei clic sulle schede
 $('#content-area').addEventListener('click', e => {
   const card = e.target.closest('.card');
   if (card && card.dataset.id) {
@@ -1002,6 +1001,38 @@ $('#btn-search-online').addEventListener('click', ()=>{
   if(q) searchOnline(q);
 });
 
+// Funzione automatica per cercare tramite ISBN scansionato
+async function fetchBookByIsbn(isbn){
+  try{
+    const res = await fetch('https://www.googleapis.com/books/v1/volumes?q=isbn:' + isbn);
+    const data = await res.json();
+    if(data && data.items && data.items.length > 0){
+      const info = data.items[0].volumeInfo || {};
+      const thumb = info.imageLinks ? (info.imageLinks.thumbnail || info.imageLinks.smallThumbnail) : '';
+      
+      $('#f-title').value = info.title || '';
+      $('#f-author').value = (info.authors || []).join(', ') || 'Autore sconosciuto';
+      $('#f-date').value = info.publishedDate ? info.publishedDate.slice(0,4) : '';
+      $('#f-genre').innerHTML = genreOptionsHtml((info.categories || [])[0] || '');
+      $('#f-barcode').value = isbn;
+      
+      addFormCover = thumb ? thumb.replace('http://','https://').replace('&edge=curl', '') : '';
+      addFormColor = '';
+      renderCoverPreview();
+      switchMode('manual');
+      showToast('Libro trovato e compilato automaticamente!');
+    } else {
+      $('#f-barcode').value = isbn;
+      switchMode('manual');
+      showToast('Codice scansionato, ma nessun libro trovato online. Inserisci i dati manualmente.');
+    }
+  }catch(err){
+    $('#f-barcode').value = isbn;
+    switchMode('manual');
+    showToast('Errore durante la ricerca del codice a barre.');
+  }
+}
+
 async function startScanner(){
   const statusEl = $('#scan-status');
   if(typeof Html5Qrcode === 'undefined') return;
@@ -1009,9 +1040,8 @@ async function startScanner(){
     html5QrCode = new Html5Qrcode("scanner-view");
     await html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, async (txt)=>{
       stopScanner();
-      $('#f-barcode').value = txt;
-      switchMode('manual');
-      searchOnline(txt);
+      statusEl.textContent = 'Codice letto: ' + txt + ' — Cerco online…';
+      await fetchBookByIsbn(txt);
     }, ()=>{});
     scannerRunning = true;
     $('#btn-scan-start').style.display = 'none';
