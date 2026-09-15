@@ -945,16 +945,21 @@ $('#add-save').addEventListener('click', async ()=>{
   showToast('Libro aggiunto.');
 });
 
+// Ricerca online combinata (Google Books + Open Library)
 async function searchOnline(query){
   const resultsEl = $('#search-results');
   resultsEl.innerHTML = '<div class="state-msg"><div class="loading-spinner"></div></div>';
   const q = encodeURIComponent(query);
+
+  const fetchGoogle = fetch('https://www.googleapis.com/books/v1/volumes?maxResults=10&q=' + q).then(r=>r.json()).catch(()=>null);
+  const fetchOpenLib = fetch('https://openlibrary.org/search.json?limit=10&q=' + q).then(r=>r.json()).catch(()=>null);
+
   try{
-    const res = await fetch('https://www.googleapis.com/books/v1/volumes?maxResults=10&q=' + q);
-    const data = await res.json();
+    const [googleData, openData] = await Promise.all([fetchGoogle, fetchOpenLib]);
     let combined = [];
-    if(data && data.items){
-      data.items.forEach(it => {
+
+    if(googleData && googleData.items){
+      googleData.items.forEach(it => {
         const info = it.volumeInfo || {};
         const thumb = info.imageLinks ? (info.imageLinks.thumbnail || info.imageLinks.smallThumbnail) : '';
         combined.push({
@@ -962,42 +967,78 @@ async function searchOnline(query){
           author: (info.authors||[]).join(', ') || 'Autore sconosciuto',
           year: info.publishedDate ? info.publishedDate.slice(0,4) : '',
           genre: (info.categories||[])[0] || '',
-          isbn: ((info.industryIdentifiers||[]).find(i=> i.type==='ISBN_13') || {}).identifier || '',
+          isbn: ((info.industryIdentifiers||[]).find(i=> i.type==='ISBN_13') || (info.industryIdentifiers||[])[0] || {}).identifier || '',
+          coverSm: thumb ? thumb.replace('http://','https://') : '',
           coverLg: thumb ? thumb.replace('http://','https://').replace('&edge=curl', '') : ''
         });
       });
     }
+
+    if(openData && openData.docs){
+      openData.docs.forEach(it => {
+        combined.push({
+          title: it.title || '',
+          author: (it.author_name || []).join(', ') || 'Autore sconosciuto',
+          year: it.first_publish_year || '',
+          genre: (it.subject || [])[0] || '',
+          isbn: (it.isbn || [])[0] || '',
+          coverSm: it.cover_i ? `https://covers.openlibrary.org/b/id/${it.cover_i}-M.jpg` : '',
+          coverLg: it.cover_i ? `https://covers.openlibrary.org/b/id/${it.cover_i}-L.jpg` : ''
+        });
+      });
+    }
+
     if(combined.length === 0){
-      resultsEl.innerHTML = '<div class="state-msg">Nessun risultato trovato.</div>';
+      resultsEl.innerHTML = '<div class="state-msg">Nessun risultato trovato. Prova un altro termine o inserisci il libro a mano.</div>';
       return;
     }
-    resultsEl.innerHTML = combined.map((it, idx)=>`
+
+    combined = combined.filter((v,i,a)=>a.findIndex(t=>(t.title===v.title && t.author===v.author))===i);
+
+    resultsEl.innerHTML = combined.map((it, idx)=>{
+      return `
       <div class="result-item" data-idx="${idx}">
-        <div class="result-cover">${it.coverLg ? `<img src="${escapeHtml(it.coverLg)}">` : ''}</div>
+        <div class="result-cover">${it.coverSm ? `<img src="${escapeHtml(it.coverSm)}">` : ''}</div>
         <div class="result-info">
-          <div class="result-title">${escapeHtml(it.title)}</div>
-          <div class="result-meta">${escapeHtml(it.author)}</div>
+          <div class="result-title">${escapeHtml(it.title || 'Senza titolo')}</div>
+          <div class="result-meta">${escapeHtml(it.author)}${it.year ? ' · ' + escapeHtml(it.year) : ''}</div>
         </div>
-        <button class="btn btn-sm">Usa questo</button>
-      </div>`).join('');
+        <button class="btn btn-sm" tabindex="-1">Usa questo</button>
+      </div>`;
+    }).join('');
 
     $$('.result-item', resultsEl).forEach(el=>{
-      el.addEventListener('click', e=>{
-        const it = combined[parseInt(e.currentTarget.dataset.idx, 10)];
-        $('#f-title').value = it.title;
-        $('#f-author').value = it.author;
-        $('#f-date').value = it.year;
-        $('#f-genre').innerHTML = genreOptionsHtml(it.genre);
-        $('#f-barcode').value = it.isbn;
-        addFormCover = it.coverLg;
-        addFormColor = '';
-        renderCoverPreview();
-        switchMode('manual');
+      el.addEventListener('click', (e)=>{
+        const idx = e.currentTarget.dataset.idx;
+        if(idx===undefined) return;
+        applyCombinedResult(combined[parseInt(idx,10)]);
       });
     });
+
   }catch(err){
-    resultsEl.innerHTML = '<div class="state-msg">Errore di rete.</div>';
+    resultsEl.innerHTML = '<div class="state-msg">Si è verificato un errore di rete.</div>';
   }
+}
+
+function applyCombinedResult(it){
+  $('#f-title').value = it.title || '';
+  $('#f-author').value = it.author || 'Autore sconosciuto';
+  $('#f-date').value = it.year || '';
+  
+  const genreSelect = $('#f-genre');
+  let matchedGenre = '';
+  if (it.genre) {
+    const found = BOOK_GENRES.find(g => g.toLowerCase().includes(it.genre.toLowerCase()) || it.genre.toLowerCase().includes(g.toLowerCase()));
+    matchedGenre = found || it.genre;
+  }
+  genreSelect.innerHTML = genreOptionsHtml(matchedGenre);
+
+  $('#f-barcode').value = it.isbn || '';
+  addFormCover = it.coverLg || it.coverSm || '';
+  addFormColor = '';
+  renderCoverPreview();
+  switchMode('manual');
+  showToast('Dati importati — controlla e conferma.');
 }
 
 $('#btn-search-online').addEventListener('click', ()=>{
@@ -1005,29 +1046,48 @@ $('#btn-search-online').addEventListener('click', ()=>{
   if(q) searchOnline(q);
 });
 
+// Ricerca ISBN combinata automatica dallo scanner
 async function fetchBookByIsbn(isbn){
   try{
-    const res = await fetch('https://www.googleapis.com/books/v1/volumes?q=isbn:' + isbn);
-    const data = await res.json();
-    if(data && data.items && data.items.length > 0){
-      const info = data.items[0].volumeInfo || {};
-      const thumb = info.imageLinks ? (info.imageLinks.thumbnail || info.imageLinks.smallThumbnail) : '';
-      
-      $('#f-title').value = info.title || '';
-      $('#f-author').value = (info.authors || []).join(', ') || 'Autore sconosciuto';
-      $('#f-date').value = info.publishedDate ? info.publishedDate.slice(0,4) : '';
-      $('#f-genre').innerHTML = genreOptionsHtml((info.categories || [])[0] || '');
-      $('#f-barcode').value = isbn;
-      
-      addFormCover = thumb ? thumb.replace('http://','https://').replace('&edge=curl', '') : '';
-      addFormColor = '';
-      renderCoverPreview();
-      switchMode('manual');
-      showToast('Libro trovato e compilato automaticamente!');
+    const q = encodeURIComponent(isbn);
+    const fetchGoogle = fetch('https://www.googleapis.com/books/v1/volumes?q=isbn:' + q).then(r=>r.json()).catch(()=>null);
+    const fetchOpenLib = fetch('https://openlibrary.org/search.json?isbn=' + q).then(r=>r.json()).catch(()=>null);
+
+    const [googleData, openData] = await Promise.all([fetchGoogle, fetchOpenLib]);
+    let found = null;
+
+    if(googleData && googleData.items && googleData.items.length > 0){
+        const info = googleData.items[0].volumeInfo || {};
+        const thumb = info.imageLinks ? (info.imageLinks.thumbnail || info.imageLinks.smallThumbnail) : '';
+        found = {
+          title: info.title || '',
+          author: (info.authors||[]).join(', ') || 'Autore sconosciuto',
+          year: info.publishedDate ? info.publishedDate.slice(0,4) : '',
+          genre: (info.categories||[])[0] || '',
+          isbn: isbn,
+          coverSm: thumb ? thumb.replace('http://','https://') : '',
+          coverLg: thumb ? thumb.replace('http://','https://').replace('&edge=curl', '') : ''
+        };
+    } else if (openData && openData.docs && openData.docs.length > 0) {
+        const it = openData.docs[0];
+        found = {
+          title: it.title || '',
+          author: (it.author_name || []).join(', ') || 'Autore sconosciuto',
+          year: it.first_publish_year || '',
+          genre: (it.subject || [])[0] || '',
+          isbn: isbn,
+          coverSm: it.cover_i ? `https://covers.openlibrary.org/b/id/${it.cover_i}-M.jpg` : '',
+          coverLg: it.cover_i ? `https://covers.openlibrary.org/b/id/${it.cover_i}-L.jpg` : ''
+        };
+    }
+
+    if(found){
+      applyCombinedResult(found);
+      showToast('Libro trovato tramite codice a barre!');
     } else {
       $('#f-barcode').value = isbn;
       switchMode('manual');
-      showToast('Codice scansionato, ma nessun libro trovato online.');
+      showToast('Codice scansionato ma nessun risultato online. Inserisci i dati a mano.');
     }
   }catch(err){
     $('#f-barcode').value = isbn;
