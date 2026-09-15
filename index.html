@@ -518,7 +518,7 @@ header.masthead{
             <input type="text" id="f-title" placeholder="Il nome della rosa">
           </div>
           <div class="field">
-            <label>Autore *</label>
+            <label>Autore</label>
             <input type="text" id="f-author" placeholder="Umberto Eco">
           </div>
         </div>
@@ -897,9 +897,9 @@ $('#btn-clear-cover').addEventListener('click', ()=>{
 /* Save book from manual/confirm form */
 $('#add-save').addEventListener('click', async ()=>{
   const title = $('#f-title').value.trim();
-  const author = $('#f-author').value.trim();
-  if(!title || !author){
-    showToast('Titolo e autore sono obbligatori.');
+  const author = $('#f-author').value.trim() || 'Autore sconosciuto'; /* Risolto: l'autore può mancare da API */
+  if(!title){
+    showToast('Il titolo è obbligatorio.');
     return;
   }
   const book = {
@@ -946,10 +946,11 @@ async function searchOnline(query){
         <button class="btn btn-sm" data-idx="${idx}">Usa questo</button>
       </div>`;
     }).join('');
-    resultsEl._items = items;
-    $$('.result-item button, .result-item', resultsEl).forEach(el=>{
+    
+    /* Risolto: evento agganciato solo all'item principale per evitare chiamate duplicate */
+    $$('.result-item', resultsEl).forEach(el=>{
       el.addEventListener('click', (e)=>{
-        const idx = e.currentTarget.dataset.idx ?? e.target.closest('[data-idx]')?.dataset.idx;
+        const idx = el.dataset.idx;
         if(idx===undefined) return;
         applyOnlineResult(items[parseInt(idx,10)]);
       });
