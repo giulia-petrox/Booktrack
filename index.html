@@ -220,11 +220,11 @@ header.masthead{
   color:var(--ink-faint);
 }
 
-/* ---------- Grid & Card ---------- */
+/* ---------- Grid & Card (Icone più piccole) ---------- */
 .grid{
   display:grid;
-  grid-template-columns:repeat(auto-fill, minmax(172px, 1fr));
-  gap:24px 20px;
+  grid-template-columns:repeat(auto-fill, minmax(145px, 1fr));
+  gap:20px 16px;
 }
 .card{
   background:var(--surface);
@@ -261,18 +261,18 @@ header.masthead{
   font-family:'Fraunces', serif; font-weight:600; font-size:13px;
   color:var(--ink-soft); line-height:1.25;
 }
-.card-body{ padding:13px 13px 15px; display:flex; flex-direction:column; gap:6px; flex:1; }
+.card-body{ padding:11px 11px 13px; display:flex; flex-direction:column; gap:5px; flex:1; }
 .card-title{
-  font-family:'Fraunces', serif; font-weight:600; font-size:14.5px;
+  font-family:'Fraunces', serif; font-weight:600; font-size:14px;
   line-height:1.25; color:var(--ink);
   display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
 }
-.card-author{ font-size:12.5px; color:var(--ink-soft); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.card-stars{ margin-top:3px; }
+.card-author{ font-size:12px; color:var(--ink-soft); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.card-stars{ margin-top:2px; }
 .star-row{ display:inline-flex; gap:2px; }
-.star{ width:13px; height:13px; color:var(--gold-dim); }
+.star{ width:12px; height:12px; color:var(--gold-dim); }
 .star.filled{ color:var(--gold); }
-.star-row.lg .star{ width:24px; height:24px; }
+.star-row.lg .star{ width:22px; height:22px; }
 
 /* ---------- Modal ---------- */
 .overlay{
@@ -309,8 +309,9 @@ header.masthead{
 .modal-body{ padding:20px 22px; overflow-y:auto; }
 .modal-footer{
   padding:16px 22px; border-top:1px solid var(--line-soft);
-  display:flex; justify-content:space-between; align-items:center; flex-shrink:0;
+  display:flex; justify-content:space-between; align-items:center; flex-shrink:0; gap:10px; flex-wrap:wrap;
 }
+.modal-footer-left { display:flex; gap:10px; }
 .modal-footer-right{ display:flex; gap:10px; }
 
 /* ---------- Tabs (add modal) ---------- */
@@ -335,7 +336,6 @@ header.masthead{
 }
 .field textarea{ resize:vertical; min-height:60px; }
 .field-row{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
-.field-hint{ font-size:11.5px; color:var(--ink-faint); margin-top:5px; }
 .status-picker{ display:flex; gap:8px; }
 .status-choice{
   flex:1; border:1px solid var(--line); background:var(--surface);
@@ -381,9 +381,16 @@ header.masthead{
   border:1px solid var(--line);
 }
 .scan-hint{ font-size:13px; color:var(--ink-soft); margin-top:14px; }
-.scan-manual{ margin-top:16px; }
 
-/* ---------- Detail modal ---------- */
+/* ---------- Detail panel styling ---------- */
+.detail-top{ display:flex; gap:18px; }
+.detail-cover{ width:118px; height:178px; border-radius:12px; overflow:hidden; flex-shrink:0; background:var(--bg-deep); box-shadow:0 6px 16px rgba(90,66,40,0.2); display:flex; align-items:center; justify-content:center; }
+.detail-cover img{ width:100%; height:100%; object-fit:cover; }
+.detail-info h3{ font-family:'Fraunces', serif; font-weight:600; font-size:20px; margin:0 0 4px; line-height:1.2; }
+.detail-info .detail-author{ font-size:14px; color:var(--ink-soft); margin-bottom:10px; }
+.detail-meta{ font-size:12.5px; color:var(--ink-soft); line-height:1.9; }
+.detail-meta b{ color:var(--ink); font-weight:600; }
+.detail-divider{ height:1px; background:var(--line-soft); margin:18px 0; }
 .badge{ display:inline-flex; align-items:center; padding:4px 12px; border-radius:var(--radius-pill); font-size:11.5px; font-weight:700; letter-spacing:.01em; }
 .badge-toread{ background:var(--amber-status-bg); color:var(--amber-status); }
 .badge-reading{ background:var(--burgundy-status-bg); color:var(--burgundy-status); }
@@ -410,6 +417,7 @@ header.masthead{
   .masthead-inner{ padding:0 16px; }
   .grid{ grid-template-columns:repeat(auto-fill, minmax(130px,1fr)); gap:14px 12px; }
   .field-row{ grid-template-columns:1fr; }
+  .detail-top{ flex-direction:column; align-items:center; text-align:center; }
 }
 </style>
 </head>
@@ -520,7 +528,9 @@ header.masthead{
           </div>
           <div class="field">
             <label>Genere</label>
-            <input type="text" id="f-genre" placeholder="Romanzo storico">
+            <select id="f-genre">
+              <!-- Popolato via JS -->
+            </select>
           </div>
         </div>
         <div class="field">
@@ -573,18 +583,14 @@ header.masthead{
 <div class="overlay" id="detail-overlay" style="display:none;">
   <div class="modal modal-wide">
     <div class="modal-header">
-      <h2>Modifica / Dettagli libro</h2>
+      <h2 id="detail-modal-title">Dettagli libro</h2>
       <button class="modal-close" id="detail-modal-close">
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12" stroke-linecap="round"/></svg>
       </button>
     </div>
     <div class="modal-body" id="detail-body"></div>
-    <div class="modal-footer">
-      <button class="btn btn-danger-text" id="detail-delete">Elimina libro</button>
-      <div class="modal-footer-right">
-        <button class="btn" id="detail-close-btn">Annulla</button>
-        <button class="btn btn-primary" id="detail-save">Salva modifiche</button>
-      </div>
+    <div class="modal-footer" id="detail-footer">
+      <!-- Dinamico: contiene i pulsanti Elimina, Modifica, Fatto oppure Salva/Annulla -->
     </div>
   </div>
 </div>
@@ -608,6 +614,39 @@ let addFormStatus = 'reading';
 let addFormCover = '';
 let html5QrCode = null;
 let scannerRunning = false;
+
+// Elenco predefinito dei generi letterari
+const BOOK_GENRES = [
+  "Romanzo",
+  "Narrativa contemporanea",
+  "Romanzo storico",
+  "Giallo / Thriller / Noir",
+  "Fantasy",
+  "Fantascienza",
+  "Horror",
+  "Romanzo rosa / Sentimentale",
+  "Avventura",
+  "Biografie / Autobiografie",
+  "Saggistica / Divulgazione",
+  "Storia",
+  "Filosofia / Psicologia",
+  "Poesia",
+  "Fumetti / Graphic Novel",
+  "Classici",
+  "Altro"
+];
+
+function genreOptionsHtml(selected = '') {
+  let html = '<option value="">Seleziona genere...</option>';
+  BOOK_GENRES.forEach(g => {
+    const isSel = (g === selected || (selected && g.toLowerCase() === selected.toLowerCase())) ? 'selected' : '';
+    html += `<option value="${escapeHtml(g)}" ${isSel}>${escapeHtml(g)}</option>`;
+  });
+  if (selected && !BOOK_GENRES.includes(selected)) {
+    html += `<option value="${escapeHtml(selected)}" selected>${escapeHtml(selected)}</option>`;
+  }
+  return html;
+}
 
 const $ = (sel, root=document) => root.querySelector(sel);
 const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
@@ -683,7 +722,7 @@ function statusTagStyle(s){
 function bookCardHtml(b){
   const cover = b.cover
     ? `<img src="${escapeHtml(b.cover)}" alt="">`
-    : `<div class="cover-placeholder"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 3v18"/></svg><div class="ph-title">${escapeHtml(b.title)}</div></div>`;
+    : `<div class="cover-placeholder"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 3v18"/></svg><div class="ph-title">${escapeHtml(b.title)}</div></div>`;
   return `
   <div class="card" data-id="${b.id}">
     <div class="card-cover">
@@ -796,7 +835,7 @@ function resetAddForm(){
   $('#f-title').value = '';
   $('#f-author').value = '';
   $('#f-date').value = '';
-  $('#f-genre').value = '';
+  $('#f-genre').innerHTML = genreOptionsHtml('');
   $('#f-barcode').value = '';
   addFormRating = 0;
   addFormStatus = 'reading';
@@ -893,7 +932,7 @@ $('#add-save').addEventListener('click', async ()=>{
     id: uid(),
     title, author,
     publishDate: $('#f-date').value.trim(),
-    genre: $('#f-genre').value.trim(),
+    genre: $('#f-genre').value,
     barcode: $('#f-barcode').value.trim(),
     cover: addFormCover,
     rating: addFormRating,
@@ -986,7 +1025,15 @@ function applyCombinedResult(it){
   $('#f-title').value = it.title || '';
   $('#f-author').value = it.author || 'Autore sconosciuto';
   $('#f-date').value = it.year || '';
-  $('#f-genre').value = it.genre || '';
+  
+  const genreSelect = $('#f-genre');
+  let matchedGenre = '';
+  if (it.genre) {
+    const found = BOOK_GENRES.find(g => g.toLowerCase().includes(it.genre.toLowerCase()) || it.genre.toLowerCase().includes(g.toLowerCase()));
+    matchedGenre = found || it.genre;
+  }
+  genreSelect.innerHTML = genreOptionsHtml(matchedGenre);
+
   $('#f-barcode').value = it.isbn || '';
   addFormCover = it.coverLg || it.coverSm || '';
   renderCoverPreview();
@@ -1095,7 +1142,7 @@ async function onScanSuccess(decodedText){
 $('#btn-scan-start').addEventListener('click', startScanner);
 
 /* ============================================================
-   DETAIL / EDIT MODAL
+   DETAIL / EDIT MODAL (Visualizzazione dettagli e opzioni sotto)
    ============================================================ */
 let editModalCover = '';
 
@@ -1103,128 +1150,201 @@ function openDetail(id){
   selectedBookId = id;
   const b = books.find(x=> x.id===id);
   if(!b) return;
-  editModalCover = b.cover || '';
+  
+  renderDetailView(b, false);
+}
 
+function renderDetailView(b, isEditing = false){
   const body = $('#detail-body');
-  body.innerHTML = `
-    <div class="field">
-      <label>Copertina</label>
-      <div class="cover-picker">
-        <div class="cover-preview" id="edit-cover-preview">
-          ${editModalCover ? `<img src="${escapeHtml(editModalCover)}">` : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 3v18" /></svg>`}
+  const footer = $('#detail-footer');
+  const titleEl = $('#detail-modal-title');
+
+  if(!isEditing){
+    titleEl.textContent = "Dettagli libro";
+    body.innerHTML = `
+      <div class="detail-top">
+        <div class="detail-cover">
+          ${b.cover ? `<img src="${escapeHtml(b.cover)}">` : `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 3v18"/></svg>`}
         </div>
-        <div class="cover-actions">
-          <button type="button" class="btn btn-sm file-btn">
-            Carica immagine
-            <input type="file" accept="image/*" id="edit-cover-file-input">
-          </button>
-          <button type="button" class="btn btn-ghost btn-sm" id="edit-btn-clear-cover">Rimuovi</button>
+        <div class="detail-info">
+          <span class="badge ${statusBadgeClass(b.status)}">${statusLabel(b.status)}</span>
+          <h3 style="margin-top:8px;">${escapeHtml(b.title)}</h3>
+          <div class="detail-author">${escapeHtml(b.author || 'Autore sconosciuto')}</div>
+          <div class="detail-meta">
+            ${b.genre ? `<div><b>Genere:</b> ${escapeHtml(b.genre)}</div>` : ''}
+            ${b.publishDate ? `<div><b>Pubblicazione:</b> ${escapeHtml(b.publishDate)}</div>` : ''}
+            ${b.barcode ? `<div><b>Codice a barre:</b> ${escapeHtml(b.barcode)}</div>` : ''}
+          </div>
+          <div class="rating-block" style="margin-top:10px;">
+            <div class="star-row lg">${starsMarkup(b.rating||0)}</div>
+          </div>
         </div>
       </div>
-    </div>
-    <div class="field-row">
-      <div class="field">
-        <label>Titolo *</label>
-        <input type="text" id="edit-title" value="${escapeHtml(b.title)}">
-      </div>
-      <div class="field">
-        <label>Autore</label>
-        <input type="text" id="edit-author" value="${escapeHtml(b.author)}">
-      </div>
-    </div>
-    <div class="field-row">
-      <div class="field">
-        <label>Data di pubblicazione</label>
-        <input type="text" id="edit-date" value="${escapeHtml(b.publishDate || '')}">
-      </div>
-      <div class="field">
-        <label>Genere</label>
-        <input type="text" id="edit-genre" value="${escapeHtml(b.genre || '')}">
-      </div>
-    </div>
-    <div class="field">
-      <label>Codice a barre (ISBN)</label>
-      <input type="text" id="edit-barcode" value="${escapeHtml(b.barcode || '')}">
-    </div>
-    <div class="field">
-      <label>Stato di lettura</label>
-      <div class="status-picker" id="edit-status-picker">
-        <button type="button" class="status-choice ${b.status==='toread'?'active':''}" data-status="toread">Da leggere</button>
-        <button type="button" class="status-choice ${b.status==='reading'?'active':''}" data-status="reading">In corso</button>
-        <button type="button" class="status-choice ${b.status==='read'?'active':''}" data-status="read">Letto</button>
-      </div>
-    </div>
-    <div class="field">
-      <label>La tua valutazione</label>
-      <div class="star-row lg" id="edit-rating" data-value="${b.rating||0}">${starsMarkup(b.rating||0)}</div>
-    </div>
-  `;
+    `;
 
-  let currentEditStatus = b.status;
-  let currentEditRating = b.rating || 0;
+    // Sotto i dettagli: opzioni Elimina, Modifica e Fatto come richiesto
+    footer.innerHTML = `
+      <div class="modal-footer-left">
+        <button class="btn btn-danger-text" id="detail-btn-delete">Elimina libro</button>
+      </div>
+      <div class="modal-footer-right">
+        <button class="btn" id="detail-btn-edit">Modifica</button>
+        <button class="btn btn-primary" id="detail-btn-done">Fatto</button>
+      </div>
+    `;
 
-  $('#edit-status-picker').addEventListener('click', e=>{
-    const btn = e.target.closest('.status-choice');
-    if(!btn) return;
-    currentEditStatus = btn.dataset.status;
-    $$('.status-choice', $('#edit-status-picker')).forEach(c=> c.classList.toggle('active', c===btn));
-  });
-
-  $('#edit-rating').addEventListener('click', e=>{
-    const star = e.target.closest('.star');
-    if(!star) return;
-    currentEditRating = parseInt(star.dataset.i, 10);
-    $('#edit-rating').innerHTML = starsMarkup(currentEditRating);
-  });
-
-  $('#edit-cover-file-input').addEventListener('change', e=>{
-    const file = e.target.files[0];
-    if(!file) return;
-    const reader = new FileReader();
-    reader.onload = ev=>{
-      const img = new Image();
-      img.onload = ()=>{
-        const maxW = 320;
-        const scale = Math.min(1, maxW / img.width);
-        const w = Math.round(img.width * scale);
-        const h = Math.round(img.height * scale);
-        const canvas = document.createElement('canvas');
-        canvas.width = w; canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        editModalCover = canvas.toDataURL('image/jpeg', 0.75);
-        $('#edit-cover-preview').innerHTML = `<img src="${escapeHtml(editModalCover)}">`;
-      };
-      img.src = ev.target.result;
+    $('#detail-btn-delete').onclick = async () => {
+      if(!confirm(`Eliminare "${b.title}" dalla libreria?`)) return;
+      books = books.filter(x=> x.id !== b.id);
+      await saveBooks();
+      render();
+      closeDetail();
+      showToast('Libro eliminato.');
     };
-    reader.readAsDataURL(file);
-  });
 
-  $('#edit-btn-clear-cover').addEventListener('click', ()=>{
-    editModalCover = '';
-    $('#edit-cover-preview').innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 3v18" /></svg>`;
-  });
+    $('#detail-btn-edit').onclick = () => {
+      renderDetailView(b, true);
+    };
 
-  $('#detail-save').onclick = async () => {
-    const title = $('#edit-title').value.trim();
-    const author = $('#edit-author').value.trim() || 'Autore sconosciuto';
-    if(!title){
-      showToast('Il titolo è obbligatorio.');
-      return;
-    }
-    b.title = title;
-    b.author = author;
-    b.publishDate = $('#edit-date').value.trim();
-    b.genre = $('#edit-genre').value.trim();
-    b.barcode = $('#edit-barcode').value.trim();
-    b.status = currentEditStatus;
-    b.rating = currentEditRating;
-    b.cover = editModalCover;
+    $('#detail-btn-done').onclick = closeDetail;
 
-    await saveBooks();
-    render();
-    closeDetail();
-    showToast('Modifiche salvate con successo.');
-  };
+  } else {
+    // Schermata di Modifica
+    titleEl.textContent = "Modifica libro";
+    editModalCover = b.cover || '';
+
+    body.innerHTML = `
+      <div class="field">
+        <label>Copertina</label>
+        <div class="cover-picker">
+          <div class="cover-preview" id="edit-cover-preview">
+            ${editModalCover ? `<img src="${escapeHtml(editModalCover)}">` : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 3v18" /></svg>`}
+          </div>
+          <div class="cover-actions">
+            <button type="button" class="btn btn-sm file-btn">
+              Carica immagine
+              <input type="file" accept="image/*" id="edit-cover-file-input">
+            </button>
+            <button type="button" class="btn btn-ghost btn-sm" id="edit-btn-clear-cover">Rimuovi</button>
+          </div>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Titolo *</label>
+          <input type="text" id="edit-title" value="${escapeHtml(b.title)}">
+        </div>
+        <div class="field">
+          <label>Autore</label>
+          <input type="text" id="edit-author" value="${escapeHtml(b.author)}">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Data di pubblicazione</label>
+          <input type="text" id="edit-date" value="${escapeHtml(b.publishDate || '')}">
+        </div>
+        <div class="field">
+          <label>Genere</label>
+          <select id="edit-genre">
+            ${genreOptionsHtml(b.genre || '')}
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Codice a barre (ISBN)</label>
+        <input type="text" id="edit-barcode" value="${escapeHtml(b.barcode || '')}">
+      </div>
+      <div class="field">
+        <label>Stato di lettura</label>
+        <div class="status-picker" id="edit-status-picker">
+          <button type="button" class="status-choice ${b.status==='toread'?'active':''}" data-status="toread">Da leggere</button>
+          <button type="button" class="status-choice ${b.status==='reading'?'active':''}" data-status="reading">In corso</button>
+          <button type="button" class="status-choice ${b.status==='read'?'active':''}" data-status="read">Letto</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>La tua valutazione</label>
+        <div class="star-row lg" id="edit-rating" data-value="${b.rating||0}">${starsMarkup(b.rating||0)}</div>
+      </div>
+    `;
+
+    let currentEditStatus = b.status;
+    let currentEditRating = b.rating || 0;
+
+    $('#edit-status-picker').addEventListener('click', e=>{
+      const btn = e.target.closest('.status-choice');
+      if(!btn) return;
+      currentEditStatus = btn.dataset.status;
+      $$('.status-choice', $('#edit-status-picker')).forEach(c=> c.classList.toggle('active', c===btn));
+    });
+
+    $('#edit-rating').addEventListener('click', e=>{
+      const star = e.target.closest('.star');
+      if(!star) return;
+      currentEditRating = parseInt(star.dataset.i, 10);
+      $('#edit-rating').innerHTML = starsMarkup(currentEditRating);
+    });
+
+    $('#edit-cover-file-input').addEventListener('change', e=>{
+      const file = e.target.files[0];
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = ev=>{
+        const img = new Image();
+        img.onload = ()=>{
+          const maxW = 320;
+          const scale = Math.min(1, maxW / img.width);
+          const w = Math.round(img.width * scale);
+          const h = Math.round(img.height * scale);
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          editModalCover = canvas.toDataURL('image/jpeg', 0.75);
+          $('#edit-cover-preview').innerHTML = `<img src="${escapeHtml(editModalCover)}">`;
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    $('#edit-btn-clear-cover').addEventListener('click', ()=>{
+      editModalCover = '';
+      $('#edit-cover-preview').innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 3v18" /></svg>`;
+    });
+
+    footer.innerHTML = `
+      <div class="modal-footer-left"></div>
+      <div class="modal-footer-right">
+        <button class="btn" id="edit-btn-cancel">Annulla</button>
+        <button class="btn btn-primary" id="edit-btn-save">Salva modifiche</button>
+      </div>
+    `;
+
+    $('#edit-btn-cancel').onclick = () => renderDetailView(b, false);
+
+    $('#edit-btn-save').onclick = async () => {
+      const title = $('#edit-title').value.trim();
+      const author = $('#edit-author').value.trim() || 'Autore sconosciuto';
+      if(!title){
+        showToast('Il titolo è obbligatorio.');
+        return;
+      }
+      b.title = title;
+      b.author = author;
+      b.publishDate = $('#edit-date').value.trim();
+      b.genre = $('#edit-genre').value;
+      b.barcode = $('#edit-barcode').value.trim();
+      b.status = currentEditStatus;
+      b.rating = currentEditRating;
+      b.cover = editModalCover;
+
+      await saveBooks();
+      render();
+      renderDetailView(b, false);
+      showToast('Modifiche salvate con successo.');
+    };
+  }
 
   $('#detail-overlay').style.display = 'flex';
 }
@@ -1235,19 +1355,7 @@ function closeDetail(){
 }
 
 $('#detail-modal-close').addEventListener('click', closeDetail);
-$('#detail-close-btn').addEventListener('click', closeDetail);
 $('#detail-overlay').addEventListener('click', e=>{ if(e.target.id==='detail-overlay') closeDetail(); });
-
-$('#detail-delete').addEventListener('click', async ()=>{
-  if(!selectedBookId) return;
-  const b = books.find(x=> x.id===selectedBookId);
-  if(!confirm(`Eliminare "${b?.title || 'questo libro'}" dalla libreria?`)) return;
-  books = books.filter(x=> x.id !== selectedBookId);
-  await saveBooks();
-  render();
-  closeDetail();
-  showToast('Libro eliminato.');
-});
 
 /* ---------------- Init ---------------- */
 loadBooks();
