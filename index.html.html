@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BookTrack — la tua libreria</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg: #F7EFE1;
+  --bg-deep: #EFE1C8;
+  --surface: #FFFBF3;
+  --surface-raised: #FFFFFF;
+  --ink: #2C3A28;
+  --ink-soft: #6C7560;
+  --ink-faint: #A2A791;
+  --accent: #C1595A;
+  --accent-hover: #AC494B;
+  --accent-soft: #F7E1DF;
+  --gold: #C99A3E;
+  --gold-dim: #EFDDAE;
+  --line: #E4D6B8;
+  --line-soft: #F0E6CE;
+  --green-status: #4F6B48;
+  --green-status-bg: #E1E9D6;
+  --amber-status: #A17A1E;
+  --amber-status-bg: #F5E8C4;
+  --burgundy-status: #C1595A;
+  --burgundy-status-bg: #F7DEDD;
+  --danger: #A5403F;
+  --radius-s: 10px;
+  --radius-m: 18px;
+  --radius-pill: 999px;
+  --shadow-card: 0 2px 5px rgba(90,66,40,0.08), 0 8px 20px rgba(90,66,40,0.07);
+  --shadow-modal: 0 20px 60px rgba(46,36,20,0.28);
+}
+*{ box-sizing:border-box; }
+html{ scroll-behavior:smooth; }
+body{
+  margin:0;
+  background:
+    radial-gradient(900px 500px at 8% -8%, rgba(255,255,255,0.55), transparent 55%),
+    radial-gradient(700px 500px at 100% 0%, rgba(193,89,90,0.06), transparent 55%),
+    var(--bg);
+  color:var(--ink);
+  font-family:'Source Sans 3', sans-serif;
+  min-height:100vh;
+}
+::selection{ background:var(--gold-dim); }
+:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+img{ max-width:100%; display:block; }
+button{ font-family:inherit; cursor:pointer; }
+input,select,textarea{ font-family:inherit; }
+
+.wrap{ max-width:1180px; margin:0 auto; padding:0 28px 80px; }
+
+/* ---------- Header ---------- */
+header.masthead{
+  border-bottom:1px solid var(--line);
+  padding:38px 0 26px;
+  margin-bottom:30px;
+  position:relative;
+  overflow:hidden;
+}
+.masthead-inner{
+  max-width:1180px; margin:0 auto; padding:0 28px;
+  display:flex; align-items:flex-end; justify-content:space-between; gap:24px; flex-wrap:wrap;
+  position:relative; z-index:1;
+}
+.brand{ display:flex; align-items:center; gap:16px; }
+.brand-mark{ flex-shrink:0; }
+.brand-text h1{
+  font-family:'Fraunces', serif;
+  font-weight:600;
+  font-style:italic;
+  font-size:36px;
+  letter-spacing:-0.01em;
+  margin:0;
+  color:var(--ink);
+  line-height:1;
+}
+.brand-text p{
+  margin:7px 0 0;
+  font-size:13.5px;
+  color:var(--ink-soft);
+}
+.header-actions{ display:flex; align-items:center; gap:10px; }
+.shelf-count{
+  font-family:'Fraunces', serif;
+  font-size:15px;
+  color:var(--ink-soft);
+  padding-right:4px;
+}
+.shelf-count b{ color:var(--ink); font-weight:600; }
+
+/* ---------- Buttons ---------- */
+.btn{
+  border:1px solid var(--line);
+  background:var(--surface);
+  color:var(--ink);
+  padding:10px 18px;
+  border-radius:var(--radius-pill);
+  font-size:14px;
+  font-weight:600;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  transition:background .15s ease, border-color .15s ease, transform .12s ease, box-shadow .15s ease;
+}
+.btn:hover{ background:var(--surface-raised); border-color:var(--ink-faint); transform:translateY(-1px); box-shadow:0 3px 8px rgba(90,66,40,0.1); }
+.btn:active{ transform:translateY(0px); }
+.btn-primary{
+  background:var(--accent);
+  border-color:var(--accent);
+  color:#FFF6F2;
+}
+.btn-primary:hover{ background:var(--accent-hover); border-color:var(--accent-hover); }
+.btn-ghost{
+  background:transparent;
+  border-color:transparent;
+  color:var(--ink-soft);
+  padding:10px 10px;
+}
+.btn-ghost:hover{ background:var(--bg-deep); color:var(--ink); box-shadow:none; transform:none; }
+.btn-danger-text{
+  background:transparent;
+  border-color:transparent;
+  color:var(--danger);
+}
+.btn-danger-text:hover{ background:#F7E6E5; box-shadow:none; transform:none; }
+.btn-sm{ padding:8px 14px; font-size:13px; }
+.btn:disabled{ opacity:.5; cursor:not-allowed; }
+.icon{ width:16px; height:16px; flex-shrink:0; }
+
+/* ---------- Toolbar ---------- */
+.toolbar{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:16px; flex-wrap:wrap;
+  margin-bottom:26px;
+}
+.toolbar-left{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.search-box{
+  position:relative;
+  min-width:230px;
+}
+.search-box input{
+  width:100%;
+  padding:10px 14px 10px 36px;
+  border:1px solid var(--line);
+  background:var(--surface);
+  border-radius:var(--radius-pill);
+  font-size:14px;
+  color:var(--ink);
+}
+.search-box input::placeholder{ color:var(--ink-faint); }
+.search-box svg{
+  position:absolute; left:13px; top:50%; transform:translateY(-50%);
+  width:15px; height:15px; color:var(--ink-faint);
+}
+.status-tabs{
+  display:flex; gap:2px;
+  background:var(--bg-deep);
+  border-radius:var(--radius-pill);
+  padding:4px;
+}
+.status-tab{
+  border:none; background:transparent; color:var(--ink-soft);
+  font-size:13px; font-weight:600; padding:8px 15px; border-radius:var(--radius-pill);
+  transition:background .15s ease, color .15s ease;
+}
+.status-tab.active{ background:var(--surface-raised); color:var(--accent); box-shadow:0 2px 5px rgba(90,66,40,0.12); }
+.group-select{
+  border:1px solid var(--line);
+  background:var(--surface);
+  color:var(--ink);
+  padding:10px 32px 10px 16px;
+  border-radius:var(--radius-pill);
+  font-size:13px;
+  font-weight:600;
+  appearance:none;
+  background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="%236C7560"><path d="M5.5 8l4.5 4.5L14.5 8z"/></svg>');
+  background-repeat:no-repeat;
+  background-position:right 10px center;
+  background-size:14px;
+}
+
+/* ---------- Empty state ---------- */
+.empty-state{
+  border:1.5px dashed var(--line);
+  border-radius:var(--radius-m);
+  padding:64px 30px;
+  text-align:center;
+  background:rgba(255,255,255,0.35);
+}
+.empty-illustration{ margin:0 auto 18px; }
+.empty-state h3{
+  font-family:'Fraunces', serif; font-weight:500; font-style:italic;
+  font-size:23px; margin:0 0 8px; color:var(--ink);
+}
+.empty-state p{ color:var(--ink-soft); font-size:14.5px; margin:0 0 22px; }
+
+/* ---------- Group headers ---------- */
+.group-block{ margin-bottom:34px; }
+.group-title{
+  font-family:'Fraunces', serif;
+  font-weight:600;
+  font-size:18px;
+  color:var(--ink);
+  border-bottom:1px solid var(--line);
+  padding-bottom:8px;
+  margin:0 0 16px;
+  display:flex; align-items:baseline; gap:10px;
+}
+.group-title span{
+  font-family:'Source Sans 3', sans-serif;
+  font-weight:600;
+  font-size:12.5px;
+  color:var(--ink-faint);
+}
+
+/* ---------- Grid & Card ---------- */
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(172px, 1fr));
+  gap:24px 20px;
+}
+.card{
+  background:var(--surface);
+  border:1px solid var(--line-soft);
+  border-radius:var(--radius-m);
+  box-shadow:var(--shadow-card);
+  overflow:hidden;
+  cursor:pointer;
+  transition:transform .18s ease, box-shadow .18s ease;
+  display:flex; flex-direction:column;
+}
+.card:hover{ transform:translateY(-4px) rotate(-0.3deg); box-shadow:0 14px 28px rgba(90,66,40,0.16); }
+.card-cover{
+  width:100%; aspect-ratio:2/3;
+  background:var(--bg-deep);
+  display:flex; align-items:center; justify-content:center;
+  overflow:hidden;
+  position:relative;
+}
+.card-cover img{ width:100%; height:100%; object-fit:cover; }
+.cover-tag{
+  position:absolute; top:9px; left:9px;
+  padding:4px 10px; border-radius:var(--radius-pill);
+  font-size:10.5px; font-weight:700; letter-spacing:.01em;
+  box-shadow:0 2px 6px rgba(0,0,0,0.18);
+}
+.cover-placeholder{
+  width:100%; height:100%;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  padding:16px; text-align:center; gap:10px;
+  background:linear-gradient(160deg, var(--bg-deep), var(--surface));
+}
+.cover-placeholder .ph-title{
+  font-family:'Fraunces', serif; font-weight:600; font-size:13px;
+  color:var(--ink-soft); line-height:1.25;
+}
+.card-body{ padding:13px 13px 15px; display:flex; flex-direction:column; gap:6px; flex:1; }
+.card-title{
+  font-family:'Fraunces', serif; font-weight:600; font-size:14.5px;
+  line-height:1.25; color:var(--ink);
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+}
+.card-author{ font-size:12.5px; color:var(--ink-soft); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.card-stars{ margin-top:3px; }
+.star-row{ display:inline-flex; gap:2px; }
+.star{ width:13px; height:13px; color:var(--gold-dim); }
+.star.filled{ color:var(--gold); }
+.star-row.lg .star{ width:24px; height:24px; }
+
+/* ---------- Modal ---------- */
+.overlay{
+  position:fixed; inset:0; background:rgba(24,20,14,0.5);
+  display:flex; align-items:center; justify-content:center;
+  padding:24px; z-index:100;
+  animation:fadeIn .15s ease;
+}
+@keyframes fadeIn{ from{opacity:0;} to{opacity:1;} }
+.modal{
+  background:var(--surface-raised);
+  border-radius:24px;
+  box-shadow:var(--shadow-modal);
+  width:100%; max-width:560px;
+  max-height:88vh;
+  display:flex; flex-direction:column;
+  overflow:hidden;
+}
+.modal-wide{ max-width:660px; }
+.modal-header{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:18px 22px; border-bottom:1px solid var(--line-soft);
+  flex-shrink:0;
+}
+.modal-header h2{
+  font-family:'Fraunces', serif; font-weight:600; font-style:italic;
+  font-size:20px; margin:0; color:var(--ink);
+}
+.modal-close{
+  background:none; border:none; color:var(--ink-soft); padding:4px;
+  border-radius:3px; display:flex;
+}
+.modal-close:hover{ background:var(--bg-deep); color:var(--ink); }
+.modal-body{ padding:20px 22px; overflow-y:auto; }
+.modal-footer{
+  padding:16px 22px; border-top:1px solid var(--line-soft);
+  display:flex; justify-content:flex-end; gap:10px; flex-shrink:0;
+}
+
+/* ---------- Tabs (add modal) ---------- */
+.mode-tabs{ display:flex; gap:4px; padding:0 22px; border-bottom:1px solid var(--line-soft); flex-shrink:0; }
+.mode-tab{
+  background:none; border:none; padding:12px 6px; margin-right:18px;
+  font-size:13.5px; font-weight:600; color:var(--ink-faint);
+  border-bottom:2px solid transparent; position:relative; top:1px;
+}
+.mode-tab.active{ color:var(--accent); border-bottom-color:var(--accent); }
+
+/* ---------- Forms ---------- */
+.field{ margin-bottom:15px; }
+.field label{
+  display:block; font-size:12.5px; font-weight:600; color:var(--ink-soft);
+  margin-bottom:6px;
+}
+.field input[type=text], .field input[type=date], .field input[type=number], .field select, .field textarea{
+  width:100%; padding:10px 13px; border:1px solid var(--line);
+  border-radius:12px; background:var(--surface); color:var(--ink);
+  font-size:14px;
+}
+.field textarea{ resize:vertical; min-height:60px; }
+.field-row{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.field-hint{ font-size:11.5px; color:var(--ink-faint); margin-top:5px; }
+.status-picker{ display:flex; gap:8px; }
+.status-choice{
+  flex:1; border:1px solid var(--line); background:var(--surface);
+  padding:10px 6px; border-radius:var(--radius-pill); font-size:12.5px; font-weight:600;
+  color:var(--ink-soft); text-align:center; transition:all .12s ease;
+}
+.status-choice.active{ background:var(--accent); border-color:var(--accent); color:#FFF6F2; }
+.cover-picker{ display:flex; gap:14px; align-items:flex-start; }
+.cover-preview{
+  width:78px; height:116px; flex-shrink:0; border-radius:12px; overflow:hidden;
+  background:var(--bg-deep); border:1px solid var(--line);
+  display:flex; align-items:center; justify-content:center;
+}
+.cover-preview img{ width:100%; height:100%; object-fit:cover; }
+.cover-preview svg{ width:26px; height:26px; color:var(--ink-faint); }
+.cover-actions{ display:flex; flex-direction:column; gap:8px; }
+.file-btn{ position:relative; overflow:hidden; }
+.file-btn input[type=file]{ position:absolute; inset:0; opacity:0; cursor:pointer; }
+
+/* ---------- Search-online panel ---------- */
+.search-online-bar{ display:flex; gap:8px; margin-bottom:16px; }
+.search-online-bar input{ flex:1; padding:10px 14px; border:1px solid var(--line); border-radius:var(--radius-pill); font-size:14px; }
+.result-list{ display:flex; flex-direction:column; gap:2px; max-height:360px; overflow-y:auto; margin:-4px; padding:4px; }
+.result-item{
+  display:flex; gap:12px; padding:10px; border-radius:14px;
+  border:1px solid transparent; align-items:center;
+}
+.result-item:hover{ background:var(--bg-deep); border-color:var(--line); }
+.result-cover{ width:42px; height:62px; flex-shrink:0; border-radius:8px; overflow:hidden; background:var(--bg-deep); display:flex; align-items:center; justify-content:center; }
+.result-cover img{ width:100%; height:100%; object-fit:cover; }
+.result-info{ flex:1; min-width:0; }
+.result-title{ font-family:'Fraunces', serif; font-weight:600; font-size:14px; color:var(--ink); line-height:1.25; }
+.result-meta{ font-size:12px; color:var(--ink-soft); margin-top:2px; }
+.result-item button{ flex-shrink:0; }
+.state-msg{ text-align:center; padding:34px 12px; color:var(--ink-soft); font-size:13.5px; }
+
+/* ---------- Scan panel ---------- */
+.scan-wrap{ text-align:center; }
+#scanner-view{
+  width:100%; max-width:340px; margin:0 auto; border-radius:18px;
+  overflow:hidden; background:#111; min-height:220px;
+  border:1px solid var(--line);
+}
+.scan-hint{ font-size:13px; color:var(--ink-soft); margin-top:14px; }
+.scan-manual{ margin-top:16px; }
+
+/* ---------- Detail modal ---------- */
+.detail-top{ display:flex; gap:18px; }
+.detail-cover{ width:118px; height:178px; border-radius:12px; overflow:hidden; flex-shrink:0; background:var(--bg-deep); box-shadow:0 6px 16px rgba(90,66,40,0.2); }
+.detail-cover img{ width:100%; height:100%; object-fit:cover; }
+.detail-info h3{ font-family:'Fraunces', serif; font-weight:600; font-size:20px; margin:0 0 4px; line-height:1.2; }
+.detail-info .detail-author{ font-size:14px; color:var(--ink-soft); margin-bottom:10px; }
+.detail-meta{ font-size:12.5px; color:var(--ink-soft); line-height:1.9; }
+.detail-meta b{ color:var(--ink); font-weight:600; }
+.detail-divider{ height:1px; background:var(--line-soft); margin:18px 0; }
+.rating-block{ display:flex; align-items:center; gap:10px; margin-top:12px; }
+.rating-block .star-row{ cursor:pointer; }
+.badge{ display:inline-flex; align-items:center; padding:4px 12px; border-radius:var(--radius-pill); font-size:11.5px; font-weight:700; letter-spacing:.01em; }
+.badge-toread{ background:var(--amber-status-bg); color:var(--amber-status); }
+.badge-reading{ background:var(--burgundy-status-bg); color:var(--burgundy-status); }
+.badge-read{ background:var(--green-status-bg); color:var(--green-status); }
+
+/* ---------- Toast ---------- */
+.toast{
+  position:fixed; bottom:26px; left:50%; transform:translateX(-50%) translateY(20px);
+  background:var(--ink); color:#F4EFE2; padding:11px 20px; border-radius:var(--radius-s);
+  font-size:13.5px; font-weight:600; opacity:0; pointer-events:none; transition:all .25s ease;
+  z-index:200; box-shadow:0 8px 24px rgba(0,0,0,0.3);
+}
+.toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+.loading-spinner{
+  width:22px; height:22px; border:2.5px solid var(--line);
+  border-top-color:var(--accent); border-radius:50%;
+  animation:spin .7s linear infinite; margin:0 auto;
+}
+@keyframes spin{ to{ transform:rotate(360deg); } }
+
+@media (max-width:600px){
+  .wrap{ padding:0 16px 60px; }
+  .masthead-inner{ padding:0 16px; }
+  .grid{ grid-template-columns:repeat(auto-fill, minmax(130px,1fr)); gap:14px 12px; }
+  .field-row{ grid-template-columns:1fr; }
+  .detail-top{ flex-direction:column; align-items:center; text-align:center; }
+}
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <div class="brand">
+      <svg class="brand-mark" width="42" height="42" viewBox="0 0 42 42" fill="none">
+        <rect x="3" y="24" width="30" height="7" rx="2" fill="#C99A3E" transform="rotate(-2 3 24)"/>
+        <rect x="5" y="15" width="27" height="7" rx="2" fill="#4F6B48" transform="rotate(2 5 15)"/>
+        <rect x="7" y="6" width="24" height="7" rx="2" fill="#C1595A" transform="rotate(-1 7 6)"/>
+        <path d="M23 3 L23 14 L26.5 11.5 L30 14 L30 3 Z" fill="#FFFBF3" stroke="#C1595A" stroke-width="1"/>
+      </svg>
+      <div class="brand-text">
+        <h1>BookTrack</h1>
+        <p>La tua libreria personale, sempre a portata di mano</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <span class="shelf-count" id="shelf-count"></span>
+      <button class="btn btn-ghost btn-sm" id="btn-clear-all" title="Svuota libreria">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="btn btn-primary" id="btn-add-open">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>
+        Aggiungi libro
+      </button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35" stroke-linecap="round"/></svg>
+        <input type="text" id="search-input" placeholder="Cerca per titolo o autore…">
+      </div>
+      <div class="status-tabs" id="status-tabs">
+        <button class="status-tab active" data-status="all">Tutti</button>
+        <button class="status-tab" data-status="toread">Da leggere</button>
+        <button class="status-tab" data-status="reading">In corso</button>
+        <button class="status-tab" data-status="read">Letti</button>
+      </div>
+    </div>
+    <select class="group-select" id="group-select">
+      <option value="none">Ordina per data d'aggiunta</option>
+      <option value="author">Raggruppa per autore</option>
+      <option value="genre">Raggruppa per genere</option>
+    </select>
+  </div>
+
+  <div id="content-area">
+    <div class="state-msg"><div class="loading-spinner"></div></div>
+  </div>
+
+</div>
+
+<!-- ============ ADD BOOK MODAL ============ -->
+<div class="overlay" id="add-overlay" style="display:none;">
+  <div class="modal modal-wide">
+    <div class="modal-header">
+      <h2 id="add-modal-title">Aggiungi un libro</h2>
+      <button class="modal-close" id="add-modal-close">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="mode-tabs">
+      <button class="mode-tab active" data-mode="manual">Inserimento manuale</button>
+      <button class="mode-tab" data-mode="search">Cerca online</button>
+      <button class="mode-tab" data-mode="scan">Scansiona codice a barre</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- Manual form (also used to confirm scan/search results) -->
+      <div id="panel-manual">
+        <div class="field">
+          <label>Copertina</label>
+          <div class="cover-picker">
+            <div class="cover-preview" id="cover-preview">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 3v18" /></svg>
+            </div>
+            <div class="cover-actions">
+              <button type="button" class="btn btn-sm file-btn">
+                Carica immagine
+                <input type="file" accept="image/*" id="cover-file-input">
+              </button>
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-clear-cover">Rimuovi</button>
+            </div>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Titolo *</label>
+            <input type="text" id="f-title" placeholder="Il nome della rosa">
+          </div>
+          <div class="field">
+            <label>Autore *</label>
+            <input type="text" id="f-author" placeholder="Umberto Eco">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Data di pubblicazione</label>
+            <input type="text" id="f-date" placeholder="1980 oppure 12/09/1980">
+          </div>
+          <div class="field">
+            <label>Genere</label>
+            <input type="text" id="f-genre" placeholder="Romanzo storico">
+          </div>
+        </div>
+        <div class="field">
+          <label>Codice a barre (ISBN)</label>
+          <input type="text" id="f-barcode" placeholder="978030758836">
+        </div>
+        <div class="field">
+          <label>Stato di lettura</label>
+          <div class="status-picker" id="f-status-picker">
+            <button type="button" class="status-choice" data-status="toread">Da leggere</button>
+            <button type="button" class="status-choice active" data-status="reading">In corso</button>
+            <button type="button" class="status-choice" data-status="read">Letto</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>La tua valutazione</label>
+          <div class="star-row lg" id="f-rating" data-value="0"></div>
+        </div>
+      </div>
+
+      <!-- Search online -->
+      <div id="panel-search" style="display:none;">
+        <div class="search-online-bar">
+          <input type="text" id="search-online-input" placeholder="Cerca per titolo, autore o ISBN…">
+          <button class="btn btn-primary btn-sm" id="btn-search-online">Cerca</button>
+        </div>
+        <div class="result-list" id="search-results">
+          <div class="state-msg">Cerca un titolo per iniziare — i risultati arrivano da Google Books.</div>
+        </div>
+      </div>
+
+      <!-- Scan barcode -->
+      <div id="panel-scan" style="display:none;">
+        <div class="scan-wrap">
+          <div id="scanner-view"></div>
+          <p class="scan-hint" id="scan-status">Inquadra il codice a barre sul retro del libro.</p>
+          <button class="btn btn-sm" id="btn-scan-start" style="margin-top:10px;">Attiva fotocamera</button>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn" id="add-cancel">Annulla</button>
+      <button class="btn btn-primary" id="add-save">Aggiungi alla libreria</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ DETAIL / EDIT MODAL ============ -->
+<div class="overlay" id="detail-overlay" style="display:none;">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Dettagli libro</h2>
+      <button class="modal-close" id="detail-modal-close">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="detail-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-danger-text" id="detail-delete">Elimina libro</button>
+      <button class="btn btn-primary" id="detail-close-btn">Fatto</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script>
+/* ============================================================
+   BookTrack — state, storage, rendering, interactions
+   ============================================================ */
+
+const STORAGE_KEY = 'books';
+let books = [];
+let currentStatusFilter = 'all';
+let currentGroupBy = 'none';
+let searchQuery = '';
+let selectedBookId = null;
+let addFormRating = 0;
+let addFormStatus = 'reading';
+let addFormCover = '';
+let html5QrCode = null;
+let scannerRunning = false;
+
+const $ = (sel, root=document) => root.querySelector(sel);
+const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+
+function uid(){
+  return 'bk_' + Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+}
+
+function showToast(msg){
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(()=> t.classList.remove('show'), 2600);
+}
+
+/* ---------------- Storage (browser localStorage: dati salvati solo su questo dispositivo/browser) ---------------- */
+async function loadBooks(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    books = raw ? JSON.parse(raw) : [];
+  }catch(e){
+    books = [];
+  }
+  render();
+}
+
+async function saveBooks(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(books));
+  }catch(e){
+    showToast('Errore di salvataggio: spazio esaurito o browser in modalità privata.');
+  }
+}
+
+/* ---------------- Star rating render ---------------- */
+function starsMarkup(value, size=''){
+  let html = '';
+  for(let i=1;i<=5;i++){
+    html += `<svg data-i="${i}" class="star ${i<=value?'filled':''}" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l2.9 6.3 6.9.7-5.2 4.6 1.6 6.8L12 17.6 5.8 20.9l1.6-6.8L2.2 9.5l6.9-.7L12 2.5z"/></svg>`;
+  }
+  return html;
+}
+
+/* ---------------- Rendering ---------------- */
+function statusLabel(s){
+  return {toread:'Da leggere', reading:'In corso', read:'Letto'}[s] || s;
+}
+function statusBadgeClass(s){
+  return {toread:'badge-toread', reading:'badge-reading', read:'badge-read'}[s] || '';
+}
+function statusStripeClass(s){
+  return {toread:'stripe-toread', reading:'stripe-reading', read:'stripe-read'}[s] || '';
+}
+
+function getFilteredBooks(){
+  let list = books.slice();
+  if(currentStatusFilter !== 'all'){
+    list = list.filter(b => b.status === currentStatusFilter);
+  }
+  if(searchQuery.trim()){
+    const q = searchQuery.trim().toLowerCase();
+    list = list.filter(b => (b.title||'').toLowerCase().includes(q) || (b.author||'').toLowerCase().includes(q));
+  }
+  return list;
+}
+
+function statusTagStyle(s){
+  return {
+    toread:'background:var(--amber-status-bg);color:var(--amber-status);',
+    reading:'background:var(--burgundy-status-bg);color:var(--burgundy-status);',
+    read:'background:var(--green-status-bg);color:var(--green-status);'
+  }[s] || '';
+}
+
+function bookCardHtml(b){
+  const cover = b.cover
+    ? `<img src="${escapeHtml(b.cover)}" alt="">`
+    : `<div class="cover-placeholder"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 3v18"/></svg><div class="ph-title">${escapeHtml(b.title)}</div></div>`;
+  return `
+  <div class="card" data-id="${b.id}">
+    <div class="card-cover">
+      ${cover}
+      <span class="cover-tag" style="${statusTagStyle(b.status)}">${statusLabel(b.status)}</span>
+    </div>
+    <div class="card-body">
+      <div class="card-title">${escapeHtml(b.title)}</div>
+      <div class="card-author">${escapeHtml(b.author || 'Autore sconosciuto')}</div>
+      <div class="card-stars"><div class="star-row">${starsMarkup(b.rating||0)}</div></div>
+    </div>
+  </div>`;
+}
+
+function escapeHtml(s){
+  if(s===undefined || s===null) return '';
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function render(){
+  $('#shelf-count').innerHTML = books.length
+    ? `<b>${books.length}</b> ${books.length===1?'libro':'libri'} in libreria`
+    : '';
+
+  const list = getFilteredBooks();
+  const area = $('#content-area');
+
+  if(books.length === 0){
+    area.innerHTML = `
+      <div class="empty-state">
+        <svg class="empty-illustration" width="88" height="72" viewBox="0 0 88 72" fill="none">
+          <rect x="10" y="42" width="40" height="10" rx="3" fill="#EFDDAE" transform="rotate(-3 10 42)"/>
+          <rect x="14" y="30" width="36" height="10" rx="3" fill="#E1E9D6" transform="rotate(2 14 30)"/>
+          <rect x="18" y="18" width="30" height="10" rx="3" fill="#F7DEDD" transform="rotate(-2 18 18)"/>
+          <path d="M60 46c4-10 14-14 22-8-2 9-12 15-22 8z" fill="#E1E9D6"/>
+          <circle cx="70" cy="16" r="4" fill="#C99A3E" opacity="0.6"/>
+        </svg>
+        <h3>Lo scaffale è ancora vuoto</h3>
+        <p>Aggiungi il tuo primo libro cercandolo online, scansionando il codice a barre o inserendolo a mano.</p>
+        <button class="btn btn-primary" id="empty-add-btn">Aggiungi un libro</button>
+      </div>`;
+    $('#empty-add-btn').addEventListener('click', ()=> openAddModal());
+    return;
+  }
+
+  if(list.length === 0){
+    area.innerHTML = `
+      <div class="empty-state">
+        <h3>Nessun libro trovato</h3>
+        <p>Prova a cambiare il filtro o il termine di ricerca.</p>
+      </div>`;
+    return;
+  }
+
+  if(currentGroupBy === 'none'){
+    const sorted = list.slice().sort((a,b)=> (b.addedAt||0) - (a.addedAt||0));
+    area.innerHTML = `<div class="grid">${sorted.map(bookCardHtml).join('')}</div>`;
+  } else {
+    const key = currentGroupBy === 'author' ? 'author' : 'genre';
+    const groups = {};
+    list.forEach(b=>{
+      const k = (b[key] && b[key].trim()) ? b[key].trim() : (key==='author' ? 'Autore sconosciuto' : 'Senza genere');
+      if(!groups[k]) groups[k] = [];
+      groups[k].push(b);
+    });
+    const groupNames = Object.keys(groups).sort((a,b)=> a.localeCompare(b, 'it'));
+    area.innerHTML = groupNames.map(name => `
+      <div class="group-block">
+        <h3 class="group-title">${escapeHtml(name)} <span>${groups[name].length} ${groups[name].length===1?'libro':'libri'}</span></h3>
+        <div class="grid">${groups[name].map(bookCardHtml).join('')}</div>
+      </div>
+    `).join('');
+  }
+
+  $$('.card', area).forEach(card=>{
+    card.addEventListener('click', ()=> openDetail(card.dataset.id));
+  });
+}
+
+/* ---------------- Toolbar events ---------------- */
+$('#search-input').addEventListener('input', e=>{
+  searchQuery = e.target.value;
+  render();
+});
+$$('.status-tab').forEach(tab=>{
+  tab.addEventListener('click', ()=>{
+    $$('.status-tab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+    currentStatusFilter = tab.dataset.status;
+    render();
+  });
+});
+$('#group-select').addEventListener('change', e=>{
+  currentGroupBy = e.target.value;
+  render();
+});
+$('#btn-clear-all').addEventListener('click', async ()=>{
+  if(books.length===0) return;
+  if(!confirm("Vuoi svuotare tutta la libreria? L'azione non è reversibile.")) return;
+  books = [];
+  await saveBooks();
+  render();
+  showToast('Libreria svuotata.');
+});
+
+/* ============================================================
+   ADD BOOK MODAL
+   ============================================================ */
+function resetAddForm(){
+  $('#f-title').value = '';
+  $('#f-author').value = '';
+  $('#f-date').value = '';
+  $('#f-genre').value = '';
+  $('#f-barcode').value = '';
+  addFormRating = 0;
+  addFormStatus = 'reading';
+  addFormCover = '';
+  $('#f-rating').dataset.value = 0;
+  $('#f-rating').innerHTML = starsMarkup(0);
+  renderCoverPreview();
+  $$('.status-choice').forEach(c=> c.classList.toggle('active', c.dataset.status===addFormStatus));
+  $('#search-online-input').value = '';
+  $('#search-results').innerHTML = '<div class="state-msg">Cerca un titolo per iniziare — i risultati arrivano da Google Books.</div>';
+}
+
+function renderCoverPreview(){
+  const el = $('#cover-preview');
+  el.innerHTML = addFormCover
+    ? `<img src="${escapeHtml(addFormCover)}" alt="">`
+    : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 3v18" /></svg>`;
+}
+
+function openAddModal(){
+  resetAddForm();
+  switchMode('manual');
+  $('#add-overlay').style.display = 'flex';
+}
+function closeAddModal(){
+  $('#add-overlay').style.display = 'none';
+  stopScanner();
+}
+$('#btn-add-open').addEventListener('click', openAddModal);
+$('#add-modal-close').addEventListener('click', closeAddModal);
+$('#add-cancel').addEventListener('click', closeAddModal);
+$('#add-overlay').addEventListener('click', e=>{ if(e.target.id==='add-overlay') closeAddModal(); });
+
+function switchMode(mode){
+  $$('.mode-tab').forEach(t=> t.classList.toggle('active', t.dataset.mode===mode));
+  $('#panel-manual').style.display = mode==='manual' ? '' : (mode==='scan'||mode==='search' ? 'none':'');
+  $('#panel-search').style.display = mode==='search' ? '' : 'none';
+  $('#panel-scan').style.display = mode==='scan' ? '' : 'none';
+  $('#panel-manual').style.display = mode==='manual' ? '' : 'none';
+  if(mode !== 'scan') stopScanner();
+  $('#add-save').style.display = mode==='manual' ? '' : 'none';
+}
+$$('.mode-tab').forEach(t=> t.addEventListener('click', ()=> switchMode(t.dataset.mode)));
+
+/* Status picker in add form */
+$('#f-status-picker').addEventListener('click', e=>{
+  const btn = e.target.closest('.status-choice');
+  if(!btn) return;
+  addFormStatus = btn.dataset.status;
+  $$('.status-choice').forEach(c=> c.classList.toggle('active', c===btn));
+});
+
+/* Rating widget in add form */
+$('#f-rating').innerHTML = starsMarkup(0);
+$('#f-rating').addEventListener('click', e=>{
+  const star = e.target.closest('.star');
+  if(!star) return;
+  addFormRating = parseInt(star.dataset.i, 10);
+  $('#f-rating').innerHTML = starsMarkup(addFormRating);
+});
+
+/* Cover upload -> resized base64 */
+$('#cover-file-input').addEventListener('change', e=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const maxW = 320;
+      const scale = Math.min(1, maxW / img.width);
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      addFormCover = canvas.toDataURL('image/jpeg', 0.75);
+      renderCoverPreview();
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+$('#btn-clear-cover').addEventListener('click', ()=>{
+  addFormCover = '';
+  renderCoverPreview();
+});
+
+/* Save book from manual/confirm form */
+$('#add-save').addEventListener('click', async ()=>{
+  const title = $('#f-title').value.trim();
+  const author = $('#f-author').value.trim();
+  if(!title || !author){
+    showToast('Titolo e autore sono obbligatori.');
+    return;
+  }
+  const book = {
+    id: uid(),
+    title, author,
+    publishDate: $('#f-date').value.trim(),
+    genre: $('#f-genre').value.trim(),
+    barcode: $('#f-barcode').value.trim(),
+    cover: addFormCover,
+    rating: addFormRating,
+    status: addFormStatus,
+    addedAt: Date.now()
+  };
+  books.push(book);
+  await saveBooks();
+  render();
+  closeAddModal();
+  showToast('Libro aggiunto alla libreria.');
+});
+
+/* ---------------- Search online (Google Books) ---------------- */
+async function searchOnline(query){
+  const resultsEl = $('#search-results');
+  resultsEl.innerHTML = '<div class="state-msg"><div class="loading-spinner"></div></div>';
+  try{
+    const resp = await fetch('https://www.googleapis.com/books/v1/volumes?maxResults=12&q=' + encodeURIComponent(query));
+    if(!resp.ok) throw new Error('network');
+    const data = await resp.json();
+    const items = data.items || [];
+    if(items.length === 0){
+      resultsEl.innerHTML = '<div class="state-msg">Nessun risultato. Prova un altro termine o inserisci il libro a mano.</div>';
+      return;
+    }
+    resultsEl.innerHTML = items.map((it, idx)=>{
+      const info = it.volumeInfo || {};
+      const thumb = info.imageLinks ? (info.imageLinks.thumbnail || info.imageLinks.smallThumbnail) : '';
+      return `
+      <div class="result-item" data-idx="${idx}">
+        <div class="result-cover">${thumb ? `<img src="${escapeHtml(thumb.replace('http://','https://'))}">` : ''}</div>
+        <div class="result-info">
+          <div class="result-title">${escapeHtml(info.title || 'Senza titolo')}</div>
+          <div class="result-meta">${escapeHtml((info.authors||[]).join(', ') || 'Autore sconosciuto')}${info.publishedDate ? ' · ' + escapeHtml(info.publishedDate.slice(0,4)) : ''}</div>
+        </div>
+        <button class="btn btn-sm" data-idx="${idx}">Usa questo</button>
+      </div>`;
+    }).join('');
+    resultsEl._items = items;
+    $$('.result-item button, .result-item', resultsEl).forEach(el=>{
+      el.addEventListener('click', (e)=>{
+        const idx = e.currentTarget.dataset.idx ?? e.target.closest('[data-idx]')?.dataset.idx;
+        if(idx===undefined) return;
+        applyOnlineResult(items[parseInt(idx,10)]);
+      });
+    });
+  }catch(err){
+    resultsEl.innerHTML = '<div class="state-msg">Non riesco a raggiungere Google Books in questo momento. Puoi comunque inserire il libro a mano.</div>';
+  }
+}
+
+function applyOnlineResult(item){
+  const info = item.volumeInfo || {};
+  $('#f-title').value = info.title || '';
+  $('#f-author').value = (info.authors||[]).join(', ');
+  $('#f-date').value = info.publishedDate || '';
+  $('#f-genre').value = (info.categories||[])[0] || '';
+  const isbn = (info.industryIdentifiers||[]).find(i=> i.type==='ISBN_13') || (info.industryIdentifiers||[])[0];
+  $('#f-barcode').value = isbn ? isbn.identifier : '';
+  const thumb = info.imageLinks ? (info.imageLinks.thumbnail || info.imageLinks.smallThumbnail) : '';
+  addFormCover = thumb ? thumb.replace('http://','https://') : '';
+  renderCoverPreview();
+  switchMode('manual');
+  showToast('Dati importati — controlla e conferma.');
+}
+
+$('#btn-search-online').addEventListener('click', ()=>{
+  const q = $('#search-online-input').value.trim();
+  if(!q){ showToast('Scrivi un titolo o un autore da cercare.'); return; }
+  searchOnline(q);
+});
+$('#search-online-input').addEventListener('keydown', e=>{
+  if(e.key === 'Enter'){ e.preventDefault(); $('#btn-search-online').click(); }
+});
+
+/* ---------------- Barcode scan ---------------- */
+async function startScanner(){
+  const statusEl = $('#scan-status');
+  if(typeof Html5Qrcode === 'undefined'){
+    statusEl.textContent = "Lo scanner non è disponibile in questo momento. Usa la ricerca online o l'inserimento manuale.";
+    return;
+  }
+  try{
+    html5QrCode = new Html5Qrcode("scanner-view", {
+      formatsToSupport: [
+        Html5QrcodeSupportedFormats.EAN_13,
+        Html5QrcodeSupportedFormats.EAN_8,
+        Html5QrcodeSupportedFormats.UPC_A,
+        Html5QrcodeSupportedFormats.UPC_E
+      ]
+    });
+    await html5QrCode.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: { width: 250, height: 130 } },
+      onScanSuccess,
+      ()=>{}
+    );
+    scannerRunning = true;
+    statusEl.textContent = 'Inquadra il codice a barre sul retro del libro.';
+    $('#btn-scan-start').style.display = 'none';
+  }catch(err){
+    statusEl.textContent = 'Non riesco ad accedere alla fotocamera. Controlla i permessi del browser oppure inserisci il codice a mano.';
+  }
+}
+
+function stopScanner(){
+  if(html5QrCode && scannerRunning){
+    html5QrCode.stop().then(()=>{ html5QrCode.clear(); }).catch(()=>{});
+    scannerRunning = false;
+    $('#btn-scan-start').style.display = '';
+  }
+}
+
+async function onScanSuccess(decodedText){
+  if(!scannerRunning) return;
+  stopScanner();
+  $('#scan-status').textContent = 'Codice rilevato: ' + decodedText + ' — sto cercando i dettagli…';
+  $('#f-barcode').value = decodedText;
+  try{
+    const resp = await fetch('https://www.googleapis.com/books/v1/volumes?q=isbn:' + encodeURIComponent(decodedText));
+    const data = await resp.json();
+    const item = (data.items || [])[0];
+    if(item){
+      applyOnlineResult(item);
+      $('#f-barcode').value = decodedText;
+    } else {
+      switchMode('manual');
+      showToast('Codice rilevato, ma nessuna corrispondenza online. Completa i dati a mano.');
+    }
+  }catch(err){
+    switchMode('manual');
+    showToast('Codice rilevato: completa i dati a mano.');
+  }
+}
+
+$('#btn-scan-start').addEventListener('click', startScanner);
+
+/* ============================================================
+   DETAIL / EDIT MODAL
+   ============================================================ */
+function openDetail(id){
+  selectedBookId = id;
+  const b = books.find(x=> x.id===id);
+  if(!b) return;
+  const body = $('#detail-body');
+  body.innerHTML = `
+    <div class="detail-top">
+      <div class="detail-cover">${b.cover ? `<img src="${escapeHtml(b.cover)}">` : `<div class="cover-placeholder" style="height:100%"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 3v18"/></svg></div>`}</div>
+      <div class="detail-info">
+        <span class="badge ${statusBadgeClass(b.status)}">${statusLabel(b.status)}</span>
+        <h3 style="margin-top:8px;">${escapeHtml(b.title)}</h3>
+        <div class="detail-author">${escapeHtml(b.author || 'Autore sconosciuto')}</div>
+        <div class="detail-meta">
+          ${b.genre ? `<div><b>Genere:</b> ${escapeHtml(b.genre)}</div>` : ''}
+          ${b.publishDate ? `<div><b>Pubblicazione:</b> ${escapeHtml(b.publishDate)}</div>` : ''}
+          ${b.barcode ? `<div><b>Codice a barre:</b> ${escapeHtml(b.barcode)}</div>` : ''}
+        </div>
+        <div class="rating-block">
+          <div class="star-row lg" id="detail-rating">${starsMarkup(b.rating||0)}</div>
+        </div>
+      </div>
+    </div>
+    <div class="detail-divider"></div>
+    <div class="field">
+      <label>Stato di lettura</label>
+      <div class="status-picker" id="detail-status-picker">
+        <button type="button" class="status-choice ${b.status==='toread'?'active':''}" data-status="toread">Da leggere</button>
+        <button type="button" class="status-choice ${b.status==='reading'?'active':''}" data-status="reading">In corso</button>
+        <button type="button" class="status-choice ${b.status==='read'?'active':''}" data-status="read">Letto</button>
+      </div>
+    </div>
+  `;
+  $('#detail-rating').addEventListener('click', async e=>{
+    const star = e.target.closest('.star');
+    if(!star) return;
+    b.rating = parseInt(star.dataset.i, 10);
+    $('#detail-rating').innerHTML = starsMarkup(b.rating);
+    await saveBooks();
+    render();
+  });
+  $('#detail-status-picker').addEventListener('click', async e=>{
+    const btn = e.target.closest('.status-choice');
+    if(!btn) return;
+    b.status = btn.dataset.status;
+    $$('.status-choice', $('#detail-status-picker')).forEach(c=> c.classList.toggle('active', c===btn));
+    $('.badge', body).className = 'badge ' + statusBadgeClass(b.status);
+    $('.badge', body).textContent = statusLabel(b.status);
+    await saveBooks();
+    render();
+  });
+  $('#detail-overlay').style.display = 'flex';
+}
+function closeDetail(){
+  $('#detail-overlay').style.display = 'none';
+  selectedBookId = null;
+}
+$('#detail-modal-close').addEventListener('click', closeDetail);
+$('#detail-close-btn').addEventListener('click', closeDetail);
+$('#detail-overlay').addEventListener('click', e=>{ if(e.target.id==='detail-overlay') closeDetail(); });
+$('#detail-delete').addEventListener('click', async ()=>{
+  if(!selectedBookId) return;
+  const b = books.find(x=> x.id===selectedBookId);
+  if(!confirm(`Eliminare "${b?.title || 'questo libro'}" dalla libreria?`)) return;
+  books = books.filter(x=> x.id !== selectedBookId);
+  await saveBooks();
+  render();
+  closeDetail();
+  showToast('Libro eliminato.');
+});
+
+/* ---------------- Init ---------------- */
+loadBooks();
+</script>
+</body>
+</html>
