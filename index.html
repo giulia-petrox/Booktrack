@@ -220,7 +220,7 @@ header.masthead{
   color:var(--ink-faint);
 }
 
-/* ---------- Grid & Card (Icone ulteriormente ridotte) ---------- */
+/* ---------- Grid & Card ---------- */
 .grid{
   display:grid;
   grid-template-columns:repeat(auto-fill, minmax(125px, 1fr));
@@ -261,6 +261,17 @@ header.masthead{
   font-family:'Fraunces', serif; font-weight:600; font-size:12px;
   color:var(--ink-soft); line-height:1.2;
 }
+.cover-solid{
+  width:100%; height:100%;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  padding:12px; text-align:center;
+}
+.cover-solid .solid-title{
+  font-family:'Fraunces', serif; font-weight:600; font-size:13px;
+  color:#FFFFFF; line-height:1.25; text-shadow:0 1px 3px rgba(0,0,0,0.3);
+  display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden;
+}
+
 .card-body{ padding:10px 10px 12px; display:flex; flex-direction:column; gap:4px; flex:1; }
 .card-title{
   font-family:'Fraunces', serif; font-weight:600; font-size:13.5px;
@@ -507,6 +518,10 @@ header.masthead{
                 Carica immagine
                 <input type="file" accept="image/*" id="cover-file-input">
               </button>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <label style="font-size:12px; margin:0; color:var(--ink-soft);">O colore tinta unita:</label>
+                <input type="color" id="f-cover-color" value="#C1595A" style="width:36px; height:28px; border:1px solid var(--line); border-radius:6px; cursor:pointer; background:none; padding:0;">
+              </div>
               <button type="button" class="btn btn-ghost btn-sm" id="btn-clear-cover">Rimuovi</button>
             </div>
           </div>
@@ -589,9 +604,7 @@ header.masthead{
       </button>
     </div>
     <div class="modal-body" id="detail-body"></div>
-    <div class="modal-footer" id="detail-footer">
-      <!-- Dinamico -->
-    </div>
+    <div class="modal-footer" id="detail-footer"></div>
   </div>
 </div>
 
@@ -612,10 +625,10 @@ let selectedBookId = null;
 let addFormRating = 0;
 let addFormStatus = 'reading';
 let addFormCover = '';
+let addFormColor = '';
 let html5QrCode = null;
 let scannerRunning = false;
 
-// Elenco predefinito dei generi letterari
 const BOOK_GENRES = [
   "Romanzo",
   "Narrativa contemporanea",
@@ -683,7 +696,7 @@ async function saveBooks(){
 }
 
 /* ---------------- Star rating render ---------------- */
-function starsMarkup(value, size=''){
+function starsMarkup(value){
   let html = '';
   for(let i=1;i<=5;i++){
     html += `<svg data-i="${i}" class="star ${i<=value?'filled':''}" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l2.9 6.3 6.9.7-5.2 4.6 1.6 6.8L12 17.6 5.8 20.9l1.6-6.8L2.2 9.5l6.9-.7L12 2.5z"/></svg>`;
@@ -694,9 +707,6 @@ function starsMarkup(value, size=''){
 /* ---------------- Rendering ---------------- */
 function statusLabel(s){
   return {toread:'Da leggere', reading:'In corso', read:'Letto'}[s] || s;
-}
-function statusBadgeClass(s){
-  return {toread:'badge-toread', reading:'badge-reading', read:'badge-read'}[s] || '';
 }
 
 function getFilteredBooks(){
@@ -720,9 +730,15 @@ function statusTagStyle(s){
 }
 
 function bookCardHtml(b){
-  const cover = b.cover
-    ? `<img src="${escapeHtml(b.cover)}" alt="">`
-    : `<div class="cover-placeholder"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 3v18"/></svg><div class="ph-title">${escapeHtml(b.title)}</div></div>`;
+  let cover = '';
+  if(b.cover){
+    cover = `<img src="${escapeHtml(b.cover)}" alt="">`;
+  } else if(b.coverColor){
+    cover = `<div class="cover-solid" style="background-color: ${escapeHtml(b.coverColor)};"><div class="solid-title">${escapeHtml(b.title)}</div></div>`;
+  } else {
+    cover = `<div class="cover-placeholder"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 3v18"/></svg><div class="ph-title">${escapeHtml(b.title)}</div></div>`;
+  }
+
   return `
   <div class="card" data-id="${b.id}">
     <div class="card-cover">
@@ -840,6 +856,8 @@ function resetAddForm(){
   addFormRating = 0;
   addFormStatus = 'reading';
   addFormCover = '';
+  addFormColor = '';
+  $('#f-cover-color').value = '#C1595A';
   $('#f-rating').dataset.value = 0;
   $('#f-rating').innerHTML = starsMarkup(0);
   renderCoverPreview();
@@ -850,9 +868,13 @@ function resetAddForm(){
 
 function renderCoverPreview(){
   const el = $('#cover-preview');
-  el.innerHTML = addFormCover
-    ? `<img src="${escapeHtml(addFormCover)}" alt="">`
-    : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 3v18" /></svg>`;
+  if(addFormCover){
+    el.innerHTML = `<img src="${escapeHtml(addFormCover)}" alt="">`;
+  } else if(addFormColor){
+    el.innerHTML = `<div style="width:100%; height:100%; background:${addFormColor};"></div>`;
+  } else {
+    el.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 3v18" /></svg>`;
+  }
 }
 
 function openAddModal(){
@@ -910,14 +932,23 @@ $('#cover-file-input').addEventListener('change', e=>{
       canvas.width = w; canvas.height = h;
       canvas.getContext('2d').drawImage(img, 0, 0, w, h);
       addFormCover = canvas.toDataURL('image/jpeg', 0.75);
+      addFormColor = ''; // Reset color if file uploaded
       renderCoverPreview();
     };
     img.src = ev.target.result;
   };
   reader.readAsDataURL(file);
 });
+
+$('#f-cover-color').addEventListener('input', e=>{
+  addFormColor = e.target.value;
+  addFormCover = ''; // Reset image if color selected
+  renderCoverPreview();
+});
+
 $('#btn-clear-cover').addEventListener('click', ()=>{
   addFormCover = '';
+  addFormColor = '';
   renderCoverPreview();
 });
 
@@ -935,6 +966,7 @@ $('#add-save').addEventListener('click', async ()=>{
     genre: $('#f-genre').value,
     barcode: $('#f-barcode').value.trim(),
     cover: addFormCover,
+    coverColor: addFormColor,
     rating: addFormRating,
     status: addFormStatus,
     addedAt: Date.now()
@@ -1036,6 +1068,7 @@ function applyCombinedResult(it){
 
   $('#f-barcode').value = it.isbn || '';
   addFormCover = it.coverLg || it.coverSm || '';
+  addFormColor = '';
   renderCoverPreview();
   switchMode('manual');
   showToast('Dati importati — controlla e conferma.');
@@ -1145,6 +1178,7 @@ $('#btn-scan-start').addEventListener('click', startScanner);
    DETAIL / EDIT MODAL
    ============================================================ */
 let editModalCover = '';
+let editModalColor = '';
 
 function openDetail(id){
   selectedBookId = id;
@@ -1161,11 +1195,18 @@ function renderDetailView(b, isEditing = false){
 
   if(!isEditing){
     titleEl.textContent = "Dettagli libro";
+    let coverHtml = '';
+    if(b.cover){
+      coverHtml = `<img src="${escapeHtml(b.cover)}">`;
+    } else if(b.coverColor){
+      coverHtml = `<div style="width:100%; height:100%; background:${escapeHtml(b.coverColor)}; display:flex; align-items:center; justify-content:center; padding:12px; text-align:center;"><span style="color:#fff; font-family:'Fraunces', serif; font-weight:600; font-size:13px; text-shadow:0 1px 3px rgba(0,0,0,0.3);">${escapeHtml(b.title)}</span></div>`;
+    } else {
+      coverHtml = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 3v18"/></svg>`;
+    }
+
     body.innerHTML = `
       <div class="detail-top">
-        <div class="detail-cover">
-          ${b.cover ? `<img src="${escapeHtml(b.cover)}">` : `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 3v18"/></svg>`}
-        </div>
+        <div class="detail-cover">${coverHtml}</div>
         <div class="detail-info">
           <span class="badge ${statusBadgeClass(b.status)}">${statusLabel(b.status)}</span>
           <h3 style="margin-top:8px;">${escapeHtml(b.title)}</h3>
@@ -1210,19 +1251,24 @@ function renderDetailView(b, isEditing = false){
   } else {
     titleEl.textContent = "Modifica libro";
     editModalCover = b.cover || '';
+    editModalColor = b.coverColor || '';
 
     body.innerHTML = `
       <div class="field">
         <label>Copertina</label>
         <div class="cover-picker">
           <div class="cover-preview" id="edit-cover-preview">
-            ${editModalCover ? `<img src="${escapeHtml(editModalCover)}">` : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 3v18" /></svg>`}
+            ${editModalCover ? `<img src="${escapeHtml(editModalCover)}">` : (editModalColor ? `<div style="width:100%; height:100%; background:${editModalColor};"></div>` : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 3v18" /></svg>`)}
           </div>
           <div class="cover-actions">
             <button type="button" class="btn btn-sm file-btn">
               Carica immagine
               <input type="file" accept="image/*" id="edit-cover-file-input">
             </button>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <label style="font-size:12px; margin:0; color:var(--ink-soft);">O colore tinta unita:</label>
+              <input type="color" id="edit-cover-color" value="${editModalColor || '#C1595A'}" style="width:36px; height:28px; border:1px solid var(--line); border-radius:6px; cursor:pointer; background:none; padding:0;">
+            </div>
             <button type="button" class="btn btn-ghost btn-sm" id="edit-btn-clear-cover">Rimuovi</button>
           </div>
         </div>
@@ -1299,6 +1345,7 @@ function renderDetailView(b, isEditing = false){
           canvas.width = w; canvas.height = h;
           canvas.getContext('2d').drawImage(img, 0, 0, w, h);
           editModalCover = canvas.toDataURL('image/jpeg', 0.75);
+          editModalColor = '';
           $('#edit-cover-preview').innerHTML = `<img src="${escapeHtml(editModalCover)}">`;
         };
         img.src = ev.target.result;
@@ -1306,8 +1353,15 @@ function renderDetailView(b, isEditing = false){
       reader.readAsDataURL(file);
     });
 
+    $('#edit-cover-color').addEventListener('input', e=>{
+      editModalColor = e.target.value;
+      editModalCover = '';
+      $('#edit-cover-preview').innerHTML = `<div style="width:100%; height:100%; background:${editModalColor};"></div>`;
+    });
+
     $('#edit-btn-clear-cover').addEventListener('click', ()=>{
       editModalCover = '';
+      editModalColor = '';
       $('#edit-cover-preview').innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 3v18" /></svg>`;
     });
 
@@ -1325,7 +1379,7 @@ function renderDetailView(b, isEditing = false){
       const title = $('#edit-title').value.trim();
       const author = $('#edit-author').value.trim() || 'Autore sconosciuto';
       if(!title){
-        showToast('Il titolo è obbligatorio.');
+        showToast('Elenco o titolo obbligatorio.');
         return;
       }
       b.title = title;
@@ -1336,10 +1390,11 @@ function renderDetailView(b, isEditing = false){
       b.status = currentEditStatus;
       b.rating = currentEditRating;
       b.cover = editModalCover;
+      b.coverColor = editModalColor;
 
       await saveBooks();
       render();
-      closeDetail(); // Torna direttamente alla libreria senza riaprire i dettagli
+      closeDetail();
       showToast('Modifiche salvate con successo.');
     };
   }
